@@ -3,31 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bản đồ Phường/Xã</title>
+    <title>Bản đồ Phân tích Dữ liệu Phường/Xã</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background-color: #f9fafb; }
-        
-        #control-panel { position: absolute; top: 1rem; left: 1rem; z-index: 1001; display: flex; flex-direction: column; gap: 0.75rem; width: 330px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; padding-top: 4rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); transform: translateX(0); transition: transform 0.3s ease-in-out; }
-        #control-panel.collapsed { transform: translateX(-110%); }
-        #panel-toggle-btn { position: absolute; top: 1rem; left: 1rem; z-index: 1002; background: white; border-radius: 0.5rem; width: 44px; height: 44px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #374151; transition: all 0.3s ease; }
-        
-        #search-box { display: flex; align-items: center; gap: 0.5rem; background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.25rem 0.75rem; }
-        #wardSearchInput { width: 100%; background: transparent; padding: 0.5rem; font-weight: 500; color: #1f2937; outline: none; border: none; }
-        #heatmap-controls { display: flex; gap: 0.5rem; }
-        #heatmap-controls button { flex-grow: 1; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; background-color: #fff; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; color: #4b5563; }
-        #heatmap-controls button:hover { background-color: #f9fafb; }
-        #heatmap-controls button.active { background-color: #334155; color: white; border-color: #1e293b; }
-        
-        #results-panel { max-height: 45vh; overflow-y: auto; }
-        #results-panel:not(:empty) { margin-top: 0.75rem; }
-        
-        #legend-container { display: none; font-size: 12px; }
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            overflow: hidden; 
+        }
+        #map { 
+            height: 100vh; 
+            width: 100vw; 
+            z-index: 1; 
+            background-color: #f9fafb; 
+        }
+
+        /* --- Thanh tìm kiếm ở trên --- */
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            display: flex;
+            justify-content: center;
+            padding: 1rem;
+            pointer-events: none;
+        }
+        #search-container {
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+            pointer-events: auto;
+        }
+        #search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.5); /* 50% trong suốt */
+            backdrop-filter: blur(8px);
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        #wardSearchInput {
+            width: 100%;
+            background: transparent;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1f2937;
+            outline: none;
+            border: none;
+        }
+        #search-results {
+            display: none;
+            position: absolute;
+            top: 110%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-height: 40vh;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* --- Thanh điều khiển ở dưới --- */
+        #bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5); /* 50% trong suốt */
+            backdrop-filter: blur(8px);
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        #heatmap-controls { 
+            display: flex; 
+            gap: 0.5rem; 
+        }
+        #heatmap-controls button { 
+            padding: 0.6rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            background-color: #fff;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #4b5563;
+        }
+        #heatmap-controls button:hover { background-color: #f3f4f6; }
+        #heatmap-controls button.active { 
+            background-color: #334155; 
+            color: white; 
+            border-color: #1e293b; 
+        }
+
+        #legend-container {
+            flex-grow: 1;
+            max-width: 300px;
+            font-size: 12px;
+            visibility: hidden; /* Dùng visibility để không làm layout bị nhảy */
+        }
         #legend-container .title { font-weight: bold; margin-bottom: 5px; color: #1f2937; }
         #legend-bar-wrapper { position: relative; padding: 10px 0; }
         #legend-container .gradient { width: 100%; height: 10px; border-radius: 5px; border: 1px solid #ccc; }
@@ -35,14 +129,29 @@
         #legend-indicator { display: none; position: absolute; top: 5px; height: 20px; width: 2px; background-color: #ef4444; transform: translateX(-1px); z-index: 10; }
         #legend-hover-value { display: none; position: absolute; top: -10px; transform: translateX(-50%); background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap; }
 
+        /* --- Responsive cho di động --- */
+        @media (max-width: 768px) {
+            #bottom-bar {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0.75rem;
+            }
+            #legend-container {
+                width: 100%;
+                max-width: none;
+                order: -1;
+            }
+            #top-bar { padding: 0.75rem; }
+            .info-popup .leaflet-popup-content { width: 90vw !important; }
+        }
+
+        /* --- Các style khác --- */
         .spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; border: 5px solid rgba(0,0,0,0.1); border-left-color: #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; z-index: 2000; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
         .ward-label { background-color: rgba(0, 0, 0, 0.6); border: none; border-radius: 4px; color: white; font-size: 14px; font-weight: bold; padding: 5px 10px; box-shadow: none; white-space: nowrap; }
         .ward-label::before { border: none !important; }
-        
-        .info-popup .leaflet-popup-content-wrapper { border-radius: 0.75rem; padding: 0; overflow: hidden; }
-        .info-popup .leaflet-popup-content { margin: 0; font-size: 14px; width: 320px !important; }
+        .info-popup .leaflet-popup-content-wrapper { border-radius: 0.75rem; padding: 0; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .info-popup .leaflet-popup-content { margin: 0; font-size: 14px; }
         .info-popup-header { background-color: #f9fafb; padding: 0.75rem 1.25rem; border-bottom: 1px solid #e5e7eb; }
         .info-popup-title { font-size: 1.125rem; font-weight: 700; color: #111827; }
         .info-popup-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
@@ -61,43 +170,81 @@
     <div id="map"></div>
     <div id="loading" class="spinner"></div>
 
-    <button id="panel-toggle-btn"> <i class="fa-solid fa-bars"></i> </button>
-    <div id="control-panel" class="collapsed">
-        <div id="search-box">
-            <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-            <input type="text" id="wardSearchInput" placeholder="Tìm phường/xã...">
+    <div id="top-bar">
+        <div id="search-container">
+            <div id="search-box">
+                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                <input type="text" id="wardSearchInput" placeholder="Tìm phường, xã, quận...">
+            </div>
+            <div id="search-results"></div>
         </div>
-        <hr class="border-gray-200">
+    </div>
+    
+    <div id="bottom-bar">
         <div id="heatmap-controls">
             <button id="btn-density" data-key="Mật độ (người/km2)">Mật độ</button>
             <button id="btn-population" data-key="Dân số (người)">Dân số</button>
             <button id="btn-area" data-key="Diện tích (km2)">Diện tích</button>
         </div>
         <div id="legend-container"></div>
-        <div id="results-panel"></div>
     </div>
     
     <script>
         const START_COLOR = { r: 247, g: 251, b: 255 };
         const END_COLOR = { r: 8, g: 48, b: 107 };
         const NO_DATA_COLOR = '#cccccc';
-
         let wardData, map, highlightedLayer, wardsLayer, choroplethInfo = {};
 
         function normalizeString(str) { if (!str) return ''; return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/p\.|phường/g, "phuong").replace(/q\.|quận/g, "quan").replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim(); }
         function setLoading(isLoading) { document.getElementById('loading').style.display = isLoading ? 'block' : 'none'; }
         function interpolateColor(color1, color2, factor) { factor = Math.max(0, Math.min(1, factor)); const r = Math.round(color1.r + factor * (color2.r - color1.r)); const g = Math.round(color1.g + factor * (color2.g - color1.g)); const b = Math.round(color1.b + factor * (color2.b - color1.b)); return `rgb(${r}, ${g}, ${b})`; }
         function getChoroplethColor(value, key) { const info = choroplethInfo[key]; if (!info || typeof value !== 'number' || !isFinite(value)) return NO_DATA_COLOR; const factor = (info.max > info.min) ? (value - info.min) / (info.max - info.min) : 0; return interpolateColor(START_COLOR, END_COLOR, factor); }
-        function updateLegend(title, min, max) { const legendDiv = document.getElementById('legend-container'); const show = title && typeof min === 'number' && typeof max === 'number'; legendDiv.style.display = show ? 'block' : 'none'; if (!show) return; const minLabel = Math.round(min).toLocaleString('vi-VN'); const maxLabel = Math.round(max).toLocaleString('vi-VN'); const startRgb = `rgb(${START_COLOR.r},${START_COLOR.g},${START_COLOR.b})`; const endRgb = `rgb(${END_COLOR.r},${END_COLOR.g},${END_COLOR.b})`; const gradientCss = `linear-gradient(to right, ${startRgb}, ${endRgb})`; legendDiv.innerHTML = `<div class="title">Giá trị: ${title}</div><div id="legend-bar-wrapper"><div class="gradient" style="background: ${gradientCss};"></div><div id="legend-indicator"></div><div id="legend-hover-value"></div></div><div class="labels"><span>${minLabel}</span><span>${maxLabel}</span></div>`; }
+        
+        // --- HÀM LEGEND ĐÃ CẬP NHẬT ---
+        function updateLegend(title, min, max) {
+            const legendDiv = document.getElementById('legend-container');
+            if (!legendDiv) return;
+
+            const show = title && typeof min === 'number' && typeof max === 'number';
+            legendDiv.style.visibility = show ? 'visible' : 'hidden';
+            if (!show) return;
+
+            let displayName = title;
+            let unit = '';
+            const unitStartIndex = title.indexOf('(');
+            if (unitStartIndex !== -1) {
+                displayName = title.substring(0, unitStartIndex).trim();
+                unit = title.substring(unitStartIndex);
+            }
+
+            const minLabel = Math.round(min).toLocaleString('vi-VN');
+            const maxLabel = Math.round(max).toLocaleString('vi-VN');
+
+            const startRgb = `rgb(${START_COLOR.r},${START_COLOR.g},${START_COLOR.b})`;
+            const endRgb = `rgb(${END_COLOR.r},${END_COLOR.g},${END_COLOR.b})`;
+            const gradientCss = `linear-gradient(to right, ${startRgb}, ${endRgb})`;
+            
+            legendDiv.innerHTML = `
+
+                <div id="legend-bar-wrapper">
+                    <div class="gradient" style="background: ${gradientCss};"></div>
+                    <div id="legend-indicator"></div>
+                    <div id="legend-hover-value"></div>
+                </div>
+                <div class="labels">
+                    <span>${minLabel}</span>
+                    <span>${maxLabel} ${unit}</span>
+                </div>`;
+        }
+
         function renderMapVisualization() { const activeBtn = document.querySelector('#heatmap-controls button.active'); if (!activeBtn) { updateLegend(null); return; } const categoryKey = activeBtn.dataset.key; if (!wardsLayer || !choroplethInfo[categoryKey]) return; const info = choroplethInfo[categoryKey]; wardsLayer.setStyle(feature => ({ fillColor: getChoroplethColor(feature.properties[categoryKey], categoryKey), weight: 0.5, opacity: 1, color: '#333', fillOpacity: 0.8 })); updateLegend(categoryKey, info.min, info.max); }
         async function loadData() { try { const [geoRes, dataRes] = await Promise.all([fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_v4.geojson'), fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_data.tsv')]); if (!geoRes.ok || !dataRes.ok) throw new Error(`Network Error`); const geojsonData = await geoRes.json(); const tsvData = parseTSV(await dataRes.text()); const dataMap = new Map(tsvData.map(row => [row['STT'], row])); geojsonData.features.forEach(f => Object.assign(f.properties, dataMap.get(f.properties['STT']))); wardData = geojsonData; prepareChoroplethData(); } catch (e) { setLoading(false); alert(`Lỗi tải dữ liệu: ${e.message}`); throw e; } }
         function parseTSV(tsvText) { const lines = tsvText.trim().split(/\r?\n/); const headers = lines[0].split('\t').map(h => h.trim()); const rows = []; for (let i = 1; i < lines.length; i++) { if (lines[i].trim() === '') continue; const values = lines[i].split('\t'); const rowObject = {}; for (let j = 0; j < headers.length; j++) { rowObject[headers[j]] = isNaN(parseFloat(values[j])) ? (values[j] || '').trim() : parseFloat(values[j]); } rows.push(rowObject); } return rows; }
         function prepareChoroplethData() { const keys = ['Mật độ (người/km2)', 'Dân số (người)', 'Diện tích (km2)']; keys.forEach(key => { const values = wardData.features.map(f => f.properties[key]).filter(v => typeof v === 'number' && isFinite(v)); if (values.length > 0) { choroplethInfo[key] = { min: Math.min(...values), max: Math.max(...values) }; } }); }
         function onWardMouseover(e) { const properties = e.target.feature.properties; const activeBtn = document.querySelector('#heatmap-controls button.active'); if (!activeBtn) return; const key = activeBtn.dataset.key; const value = properties[key]; const info = choroplethInfo[key]; const indicator = document.getElementById('legend-indicator'); const hoverValue = document.getElementById('legend-hover-value'); if (!indicator || typeof value !== 'number' || !info) return; const percent = (info.max > info.min) ? (value - info.min) / (info.max - info.min) * 100 : 0; indicator.style.left = `${percent}%`; indicator.style.display = 'block'; hoverValue.innerText = Math.round(value).toLocaleString('vi-VN'); hoverValue.style.left = `${percent}%`; hoverValue.style.display = 'block'; }
         function onWardMouseout(e) { const indicator = document.getElementById('legend-indicator'); const hoverValue = document.getElementById('legend-hover-value'); if(indicator) indicator.style.display = 'none'; if(hoverValue) hoverValue.style.display = 'none'; }
-        function createPopupContent(props) { const name = props['Tên'] || 'N/A'; const type = /xã/i.test(name) ? 'Xã' : 'Phường'; const population = props['Dân số (người)'] ? props['Dân số (người)'].toLocaleString('vi-VN') : 'N/A'; const area = props['Diện tích (km2)'] ? props['Diện tích (km2)'].toFixed(2) + ' km²' : 'N/A'; const density = props['Mật độ (người/km2)'] ? Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN') : 'N/A'; const headquarters = props['Full Address 1'] || 'Chưa có thông tin'; const lat = props['Latitude 1']; const lon = props['Longitude 1']; let html = `<div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>`; html += `<div class="info-popup-body">`; html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i> <span>Dân số</span></div> <div class="info-value">${population}</div></div>`; html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i> <span>Diện tích</span></div> <div class="info-value">${area}</div></div>`; html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i> <span>Mật độ</span></div> <div class="info-value">${density}</div></div>`; html += `<div class="info-section"><div class="info-label"><i class="fa-solid fa-location-dot fa-fw"></i> <span>Trụ sở</span></div>${headquarters}</div>`; html += `</div>`; if (lat && lon) { const navUrl = `https://maps.google.com/maps?daddr=${lat},${lon}`; html += `<div class="info-popup-footer"><a href="${navUrl}" target="_blank" class="navigate-btn"><i class="fa-solid fa-diamond-turn-right fa-fw"></i> Chỉ đường</a></div>`; } return html; }
+        function createPopupContent(props) { const name = props['Tên'] || 'N/A'; const type = /xã/i.test(name) ? 'Xã' : 'Phường'; const population = props['Dân số (người)'] ? props['Dân số (người)'].toLocaleString('vi-VN') : 'N/A'; const area = props['Diện tích (km2)'] ? props['Diện tích (km2)'].toFixed(2) + ' km²' : 'N/A'; const density = props['Mật độ (người/km2)'] ? Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN') : 'N/A'; const headquarters = props['Full Address 1'] || 'Chưa có thông tin'; const lat = props['Latitude 1']; const lon = props['Longitude 1']; let html = `<div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>`; html += `<div class="info-popup-body">`; html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i> <span>Dân số</span></div> <div class="info-value">${population}</div></div>`; html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i> <span>Diện tích</span></div> <div class="info-value">${area}</div></div>`; html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i> <span>Mật độ</span></div> <div class="info-value">${density}</div></div>`; html += `<div class="info-section"><div class="info-label"><i class="fa-solid fa-location-dot fa-fw"></i> <span>Trụ sở</span></div>${headquarters}</div>`; html += `</div>`; if (lat && lon) { const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`; html += `<div class="info-popup-footer"><a href="${navUrl}" target="_blank" class="navigate-btn"><i class="fa-solid fa-diamond-turn-right fa-fw"></i> Chỉ đường</a></div>`; } return html; }
         
-        // --- UPDATED: createWardsLayer with stopPropagation ---
         function createWardsLayer() {
             wardsLayer = L.geoJSON(wardData, {
                 style: { weight: 0.5, color: '#333', opacity: 0.8, fillOpacity: 0.1 },
@@ -106,9 +253,9 @@
                         mouseover: onWardMouseover,
                         mouseout: onWardMouseout,
                         click: (e) => {
-                            // This stops the click from reaching the map, so the highlight isn't cleared.
                             L.DomEvent.stopPropagation(e);
-                            L.popup({ className: 'info-popup', autoPanPadding: L.point(360, 50) })
+                            const yPadding = document.getElementById('bottom-bar')?.clientHeight || 100;
+                            L.popup({ className: 'info-popup', autoPanPadding: L.point(10, yPadding + 10) })
                                 .setLatLng(e.latlng)
                                 .setContent(createPopupContent(feature.properties))
                                 .openOn(map);
@@ -118,25 +265,101 @@
             }).addTo(map);
         }
 
-        function handleNameSearch() { if (!wardData) return; const query = document.getElementById('wardSearchInput').value; if (query.trim().length < 2) return; const normalizedQuery = normalizeString(query); const matches = wardData.features.filter(f => { const name = normalizeString(f.properties['Tên']); const mergedAll = normalizeString(f.properties['Sáp nhập toàn bộ từ']); const mergedPartial = normalizeString(f.properties['Sáp nhập một phần từ']); return name.includes(normalizedQuery) || mergedAll.includes(normalizedQuery) || mergedPartial.includes(normalizedQuery); }); const panel = document.getElementById('results-panel'); if (highlightedLayer) map.removeLayer(highlightedLayer); if (matches.length === 0) { panel.innerHTML = `<p class="p-2 text-center text-gray-500">Không tìm thấy kết quả.</p>`; } else if (matches.length === 1) { showResultOnMap(matches[0]); panel.innerHTML = ''; } else { panel.innerHTML = `<h3 class="font-bold text-center p-2 text-gray-700">Tìm thấy ${matches.length} kết quả:</h3><ul class="space-y-1">${matches.map(f => `<li><button onclick='handleSearchResultClick(${f.properties['STT']})' class="w-full text-left p-2 bg-gray-100 hover:bg-indigo-100 rounded-lg">${f.properties['Tên']}</button></li>`).join('')}</ul>`; } }
-        function handleSearchResultClick(stt) { const feature = wardData.features.find(f => f.properties['STT'] === stt); if (feature) { showResultOnMap(feature); document.getElementById('results-panel').innerHTML = ''; } }
-        function showResultOnMap(feature) { if (highlightedLayer) { map.removeLayer(highlightedLayer); } if (!feature) return; highlightedLayer = L.geoJSON(feature, { style: { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 } }); const wardName = feature.properties['Tên'] || 'N/A'; const namePrefix = /xã/i.test(wardName) ? 'Xã' : 'Phường'; highlightedLayer.bindTooltip(`${namePrefix} ${wardName}`, { permanent: true, direction: 'center', className: 'ward-label' }).addTo(map); const center = highlightedLayer.getBounds().getCenter(); map.flyTo(center, 15, { animate: true, duration: 1.2 }); }
+        function handleNameSearch() {
+            if (!wardData) return;
+            const query = document.getElementById('wardSearchInput').value;
+            const resultsPanel = document.getElementById('search-results');
+            if (query.trim().length < 2) {
+                resultsPanel.style.display = 'none';
+                return;
+            }
+            const normalizedQuery = normalizeString(query);
+            const matches = wardData.features.filter(f => {
+                const name = normalizeString(f.properties['Tên']);
+                const mergedAll = normalizeString(f.properties['Sáp nhập toàn bộ từ']);
+                const mergedPartial = normalizeString(f.properties['Sáp nhập một phần từ']);
+                return name.includes(normalizedQuery) || mergedAll.includes(normalizedQuery) || mergedPartial.includes(normalizedQuery);
+            });
+            
+            if (highlightedLayer) map.removeLayer(highlightedLayer);
+            
+            if (matches.length === 0) {
+                resultsPanel.innerHTML = `<p class="p-4 text-center text-gray-500">Không tìm thấy kết quả.</p>`;
+            } else {
+                resultsPanel.innerHTML = `<ul class="space-y-1 p-2">${matches.map(f => `<li><button onclick='handleSearchResultClick(${f.properties['STT']})' class="w-full text-left p-3 hover:bg-indigo-50 rounded-lg text-gray-700">${f.properties['Tên']}</button></li>`).join('')}</ul>`;
+            }
+            resultsPanel.style.display = 'block';
+        }
+
+        function handleSearchResultClick(stt) {
+            const feature = wardData.features.find(f => f.properties['STT'] === stt);
+            if (feature) {
+                showResultOnMap(feature);
+                document.getElementById('search-results').style.display = 'none';
+                document.getElementById('wardSearchInput').value = feature.properties['Tên'];
+            }
+        }
         
-        const panel = document.getElementById('control-panel');
-        const toggleBtn = document.getElementById('panel-toggle-btn');
-        toggleBtn.addEventListener('click', () => { panel.classList.toggle('collapsed'); const isCollapsed = panel.classList.contains('collapsed'); toggleBtn.innerHTML = isCollapsed ? '<i class="fa-solid fa-bars"></i>' : '<i class="fa-solid fa-xmark"></i>'; });
+        function showResultOnMap(feature) {
+            if (highlightedLayer) {
+                map.removeLayer(highlightedLayer);
+            }
+            if (!feature) return;
+
+            highlightedLayer = L.geoJSON(feature, {
+                style: { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 }
+            });
+            
+            const wardName = feature.properties['Tên'] || 'N/A';
+            const namePrefix = /xã/i.test(wardName) ? 'Xã' : 'Phường';
+            
+            highlightedLayer.bindTooltip(`${namePrefix} ${wardName}`, { permanent: true, direction: 'center', className: 'ward-label' }).addTo(map);
+            
+            const yPadding = (document.getElementById('bottom-bar')?.clientHeight || 100) + 20;
+            const xPadding = 20;
+            map.flyToBounds(highlightedLayer.getBounds(), {
+                paddingTopLeft: [xPadding, 80],
+                paddingBottomRight: [xPadding, yPadding]
+            });
+        }
         
-        document.getElementById('wardSearchInput').addEventListener('keyup', e => { if (e.key === 'Enter') handleNameSearch(); });
-        document.getElementById('heatmap-controls').addEventListener('click', e => { if (e.target.tagName === 'BUTTON') { document.querySelectorAll('#heatmap-controls button').forEach(btn => btn.classList.remove('active')); e.target.classList.add('active'); renderMapVisualization(); } });
+        document.getElementById('wardSearchInput').addEventListener('keyup', handleNameSearch);
+        document.getElementById('wardSearchInput').addEventListener('focus', handleNameSearch);
+        
+        document.getElementById('heatmap-controls').addEventListener('click', e => {
+            if (e.target.tagName === 'BUTTON') {
+                document.querySelectorAll('#heatmap-controls button').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                renderMapVisualization();
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            const searchContainer = document.getElementById('search-container');
+            if (!searchContainer.contains(event.target)) {
+                document.getElementById('search-results').style.display = 'none';
+            }
+        });
 
         async function initializeApp() {
             setLoading(true);
-            map = L.map('map', { center: [10.7769, 106.7009], zoom: 11, attributionControl: false, zoomControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', attribution: '© <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map);
+            map = L.map('map', {
+                center: [10.7769, 106.7009],
+                zoom: 11,
+                attributionControl: false,
+                zoomControl: false
+            });
             
-            // --- NEW: Add map click listener to clear highlight ---
+            L.control.zoom({ position: 'topright' }).addTo(map);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+                subdomains: 'abcd',
+                attribution: '© <a href="https://carto.com/attributions">CARTO</a>'
+            }).addTo(map);
+            
             map.on('click', () => {
                 showResultOnMap(null);
+                document.getElementById('wardSearchInput').value = '';
             });
             
             await loadData();
