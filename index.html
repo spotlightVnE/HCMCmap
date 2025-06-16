@@ -82,6 +82,11 @@
             overflow-y: auto;
             border: 1px solid #e5e7eb;
         }
+        #search-results button.focused-search-result {
+            background-color: #e0e7ff; /* Light indigo background for focus */
+            outline: 2px solid #4f46e5; /* Indigo outline */
+            outline-offset: -1px;
+        }
 
         /* --- Thanh điều khiển ở dưới --- */
         #bottom-bar {
@@ -418,15 +423,50 @@
             weight: 1, color: '#0f0f0f', opacity: 1, fillColor: '#ff7f7f', fillOpacity: 0
         };
 
-        let wardData, map, highlightedLayer, wardsLayer, choroplethInfo = {};
+        // URLs for Province and District GeoJSON files
+        const PROVINCES_GEOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Provinces.geojson';
+        const DISTRICTS_GEOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Districts.geojson';
+
+        let wardData, provinceData, districtData, currentTileLayer; // Added currentTileLayer
+        let map, searchHighlightLayer, wardsLayer, choroplethInfo = {}; // Renamed highlightedLayer
         let insetMap, conDaoFeatureForInset = null, conDaoLayerOnInset, insetMapContainerElement;
+        let displayedSearchResults = [], currentFocusedResultIndex = -1; // Added currentFocusedResultIndex
 
-
-        function normalizeString(str) {
+        function normalizeString(str) { 
+            // console.log("Original:", str);
             if (!str) {
                 return '';
             }
-            return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/p\.|phường/g, "phuong").replace(/q\.|quận/g, "quan").replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+            let n = str.toLowerCase();
+
+            // Step 1: Diacritics and 'đ'
+            n = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+            // console.log("After diacritics:", n);
+
+            // Step 2: Convert full Vietnamese terms (now without diacritics) to common short forms or standard forms
+            // "thành phố" (as "thanh pho") -> "tp"
+            n = n.replace(/\bthanh pho\b/g, "tp"); 
+            // "phường" (as "phuong"), "quận" (as "quan"), "huyện" (as "huyen") are already in their desired form.
+            // console.log("After full terms to short forms:", n);
+
+            // Step 3: Handle common abbreviations like "tp.", "p.", "q.", "h."
+            n = n.replace(/\btp\.\b/g, "tp");
+            n = n.replace(/\bp\.\b/g, "phuong");
+            n = n.replace(/\bq\.\b/g, "quan");
+            n = n.replace(/\bh\.\b/g, "huyen");
+            // console.log("After abbreviations:", n);
+
+            // Step 4: Specific normalization for "Ho Chi Minh City" variants
+            // Ensures "tp hcm", "tp ho chi minh" (from various inputs) all become "tp ho chi minh"
+            if (n.startsWith("tp ") && (n.includes("hcm") || n.includes("ho chi minh"))) {
+                 n = n.replace(/\bhcm\b/g, "ho chi minh"); // Replace "hcm" part with "ho chi minh"
+            }
+            // console.log("After HCM normalization:", n);
+            
+            // Step 5: Final cleanup - remove unwanted characters, normalize spaces
+            n = n.replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+            // console.log("Final normalized:", n);
+            return n;
         }
 
         function isAccurateMatch(normalizedQuery, normalizedTarget) {
@@ -575,13 +615,24 @@
         }
         async function loadData() {
             try {
-                const [geoRes, dataRes] = await Promise.all([fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_v4.geojson'),
-                                                             fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_data.tsv')]);
-                if (!geoRes.ok || !dataRes.ok) {
+                const [
+                    geoRes, dataRes,
+                    provincesRes, districtsRes
+                ] = await Promise.all([
+                    fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_v4.geojson'),
+                    fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_data.tsv'),
+                    fetch(PROVINCES_GEOJSON_URL),
+                    fetch(DISTRICTS_GEOJSON_URL)
+                ]);
+
+                if (!geoRes.ok || !dataRes.ok || !provincesRes.ok || !districtsRes.ok) {
                     throw new Error(`Network Error`);
                 }
                 const geojsonData = await geoRes.json();
                 const tsvData = parseTSV(await dataRes.text());
+                provinceData = await provincesRes.json(); // Store province data
+                districtData = await districtsRes.json(); // Store district data
+
                 const dataMap = new Map(tsvData.map(row => [row['STT'], row]));
                 geojsonData.features.forEach(f => Object.assign(f.properties, dataMap.get(f.properties['STT'])));
                 wardData = geojsonData;
@@ -761,7 +812,14 @@
                         mouseover: onWardMouseover,
                         mouseout: onWardMouseout,
                         click: (e) => {
-                            L.DomEvent.stopPropagation(e);
+                            L.DomEvent.stopPropagation(e); // Prevent map.on('click') from firing
+                            showResultOnMap(null); // Clear any previous search highlight
+
+                            // Clear search input and hide results list, as this click signifies a new focus
+                            document.getElementById('wardSearchInput').value = '';
+                            document.getElementById('search-results').style.display = 'none';
+                            updateFocusedSearchResult(-1); // Clear visual focus from search list
+
                             const yPadding = document.getElementById('bottom-bar')?.clientHeight || 100;
                             L.popup({ className: 'info-popup', autoPanPadding: L.point(10, yPadding + 10) })
                                 .setLatLng(e.latlng)
@@ -773,122 +831,258 @@
             }).addTo(map);
         }
 
+
         function handleNameSearch() {
             if (!wardData) {
                 return;
             }
+            currentFocusedResultIndex = -1; // Reset focused index on new search
+            
             const query = document.getElementById('wardSearchInput').value;
             const resultsPanel = document.getElementById('search-results');
             if (query.trim().length < 2) {
                 resultsPanel.style.display = 'none';
+                showResultOnMap(null); // Clear highlight if query is too short
                 return;
             }
             const normalizedQuery = normalizeString(query);
+            
+            // --- Step 1: Gather all admin matches (Provinces and Districts) ---
+            let adminMatches = [];
+            const adminSources = [
+                { data: provinceData, type: 'province' },
+                { data: districtData, type: 'district' }
+            ];
 
-            const rawMatches = wardData.features.reduce((acc, feature) => {
-                const props = feature.properties;
-                const normalizedNewName = normalizeString(props['Tên']);
-                
-                let matchedOldWardDirect = null;
-                const oldWardsAll = (props['Sáp nhập toàn bộ từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
-                const oldWardsPartial = (props['Sáp nhập một phần từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+            for (const source of adminSources) {
+                if (source.data && source.data.features) {
+                    for (const feature of source.data.features) {
+                        const adminName = feature.properties.name || '';
+                        const normalizedAdminName = normalizeString(adminName);
+                        let isMatch = false;
 
-                for (const ow of oldWardsAll) {
-                    if (isAccurateMatch(normalizedQuery, normalizeString(ow))) {
-                        matchedOldWardDirect = ow;
-                        break;
-                    }
-                }
-                if (!matchedOldWardDirect) {
-                    for (const ow of oldWardsPartial) {
-                        if (isAccurateMatch(normalizedQuery, normalizeString(ow))) {
-                            matchedOldWardDirect = ow;
-                            break;
+                        if (normalizedAdminName === normalizedQuery) { // Exact normalized name match
+                            isMatch = true;
+                        } else if (normalizedQuery.startsWith("tp ") && normalizedAdminName === normalizedQuery.substring(3).trim()) { // Query "tp X", data "X"
+                            isMatch = true;
+                        } else if (normalizedQuery.startsWith("quan ") && normalizedAdminName === normalizedQuery.substring(5).trim()) { // Query "quan X", data "X"
+                            isMatch = true;
+                        } else if (normalizedQuery.startsWith("huyen ") && normalizedAdminName === normalizedQuery.substring(6).trim()) { // Query "huyen X", data "X"
+                            isMatch = true;
+                        } else if (isAccurateMatch(normalizedQuery, normalizedAdminName)) { // General fuzzy match (e.g., query "X", data "tp X")
+                            isMatch = true;
+                        }
+
+                        if (isMatch) {
+                            adminMatches.push({
+                                feature: feature,
+                                type: source.type,
+                                displayName: adminName,
+                                normalizedDisplayName: normalizedAdminName
+                            });
                         }
                     }
                 }
+            }
 
-                const matchedViaNewName = isAccurateMatch(normalizedQuery, normalizedNewName);
+            // --- Step 2: Determine if wards should be suppressed and select admin results ---
+            let suppressWards = false;
+            let finalAdminDisplayItems = [];
 
-                if (matchedViaNewName || matchedOldWardDirect) {
-                    acc.push({
-                        feature: feature,
-                        matchedViaNewName: matchedViaNewName,
-                        matchedOldWardDirect: matchedOldWardDirect // This will be the first old ward name that matched the query
+            const queryIsPrefixed = normalizedQuery.startsWith("tp ") || normalizedQuery.startsWith("quan ") || normalizedQuery.startsWith("huyen ");
+
+            if (queryIsPrefixed) {
+                // Query looks like "tp X", "quan X", or "huyen X"
+                const queryNamePart = normalizedQuery.substring(normalizedQuery.indexOf(" ") + 1).trim();
+                
+                finalAdminDisplayItems = adminMatches.filter(item => 
+                    item.normalizedDisplayName === queryNamePart ||  // Admin data is "X"
+                    item.normalizedDisplayName === normalizedQuery   // Admin data is "tp X" / "quan X" / "huyen X"
+                );
+                if (finalAdminDisplayItems.length > 0) {
+                    suppressWards = true;
+                }
+            } else { 
+                // Query is generic (e.g., "Tân Uyên")
+                // Suppress wards if an admin item's normalized name *exactly* matches the generic query
+                finalAdminDisplayItems = adminMatches.filter(item => item.normalizedDisplayName === normalizedQuery);
+                if (finalAdminDisplayItems.length > 0) {
+                    suppressWards = true;
+                }
+            }
+
+            // --- Step 3: Build displayedSearchResults ---
+            if (suppressWards) {
+                displayedSearchResults = finalAdminDisplayItems; // Only these specific admin matches
+            } else {
+                // No suppression, or suppression condition not met strongly enough.
+                // Show all adminMatches found by any criteria.
+                displayedSearchResults = [...adminMatches]; 
+
+                // Proceed to Ward Search
+                if (wardData && wardData.features) {
+                    wardData.features.forEach(feature => {
+                        const props = feature.properties;
+                        // Ensure 'Tên' exists and is a string before calling normalizeString
+                        const newName = props['Tên'] || '';
+                        const normalizedNewName = normalizeString(newName);
+                        let matchedOldWardDirect = null;
+
+                        const oldWardsAll = (props['Sáp nhập toàn bộ từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+                        const oldWardsPartial = (props['Sáp nhập một phần từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+                        const allOldWards = [...oldWardsAll, ...oldWardsPartial];
+
+                        for (const ow of allOldWards) {
+                            // Ensure 'ow' is a string before calling normalizeString
+                            if (typeof ow === 'string' && isAccurateMatch(normalizedQuery, normalizeString(ow))) {
+                                matchedOldWardDirect = ow;
+                                break;
+                            }
+                        }
+                        const matchedViaNewName = isAccurateMatch(normalizedQuery, normalizedNewName);
+
+                        if (matchedViaNewName || matchedOldWardDirect) {
+                            displayedSearchResults.push({ 
+                                feature: feature,
+                                type: 'ward',
+                                displayName: newName,
+                                matchedOldWardDirect: matchedOldWardDirect,
+                                matchedViaNewName: matchedViaNewName
+                            });
+                        }
                     });
                 }
-                return acc;
-            }, []);
+            }
 
-            // Sort matches: prioritize those found via old ward names
-            rawMatches.sort((a, b) => {
-                const priorityA = a.matchedOldWardDirect ? 0 : (a.matchedViaNewName ? 1 : 2);
-                const priorityB = b.matchedOldWardDirect ? 0 : (b.matchedViaNewName ? 1 : 2);
+            // Sort displayedSearchResults:
+            // Priority: Ward (old) > Ward (new) > District > Province, then alphabetically
+            displayedSearchResults.sort((a, b) => {
+                const getPriority = (item) => {
+                    if (item.type === 'province') return 0; // Highest priority
+                    if (item.type === 'district') return 1; // Second highest
+                    if (item.type === 'ward' && item.matchedOldWardDirect) return 2; // Ward matched by old name
+                    if (item.type === 'ward') return 3; // Ward matched by new name
+                    return 4; // Should ideally not happen
+                };
+
+                const priorityA = getPriority(a);
+                const priorityB = getPriority(b);
 
                 if (priorityA !== priorityB) {
                     return priorityA - priorityB;
                 }
-                // Secondary sort by new name alphabetically
-                const nameA = normalizeString(a.feature.properties['Tên']);
-                const nameB = normalizeString(b.feature.properties['Tên']);
-                return nameA.localeCompare(nameB);
+
+                // If priorities are the same, apply secondary sort
+                if (priorityA === 2) { // Both are wards matched by old name (new priority 2)
+                    const oldNameA = normalizeString(a.matchedOldWardDirect);
+                    const oldNameB = normalizeString(b.matchedOldWardDirect);
+                    if (oldNameA !== oldNameB) return oldNameA.localeCompare(oldNameB);
+                    // If old names are the same (e.g. query matches old name for multiple new wards),
+                    // then sort by new display name
+                }
+                // Default secondary sort by display name for all other cases or if old names were identical
+                return normalizeString(a.displayName).localeCompare(normalizeString(b.displayName));
             });
 
-            const matches = rawMatches; // Use the sorted matches
-
-            if (highlightedLayer) {
-                map.removeLayer(highlightedLayer);
+            // Render results
+            if (searchHighlightLayer) { 
+                map.removeLayer(searchHighlightLayer);
+                searchHighlightLayer = null;
             }
 
-            if (matches.length === 0) {
+            if (displayedSearchResults.length === 0) {
                 resultsPanel.innerHTML = `<p class="p-4 text-center text-gray-500">Không tìm thấy kết quả.</p>`;
             } else {
-                resultsPanel.innerHTML = `<ul class="space-y-1 p-2">${matches.map(item => {
-                    const feature = item.feature;
-                    const props = feature.properties;
-                    const newName = props['Tên'];
-                    const stt = props['STT'];
+                resultsPanel.innerHTML = `<ul class="space-y-1 p-2">${displayedSearchResults.map((item, index) => {
+                    let displayHtml = '';
+                    let typeText = '';
 
-                    let displayHtml = `<span class="font-semibold">${newName}</span>`;
+                    if (item.type === 'ward') {
+                        typeText = 'Phường/Xã sau sáp nhập';
+                        displayHtml = `<span class="font-semibold">${item.displayName}</span>`; // Ward Name
 
-                    if (item.matchedOldWardDirect) {
-                        displayHtml += `<span class="text-xs text-grey-600 block">ĐVHC cũ: ${item.matchedOldWardDirect}</span>`;
+                        // Display the type label first
+                        displayHtml += `<span class="text-xs text-indigo-500 block font-medium">${typeText}</span>`;
+
+                        if (item.matchedOldWardDirect) {
+                            const props = item.feature.properties;
+                            const oldWardsAll = (props['Sáp nhập toàn bộ từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+                            const oldWardsPartial = (props['Sáp nhập một phần từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+                            const allOldWardsList = [...oldWardsAll, ...oldWardsPartial];
+                            
+                            const countOfOtherOldWards = allOldWardsList.filter(ow => ow !== item.matchedOldWardDirect).length;
+
+                            let sápNhapText = `Sáp nhập từ ${item.matchedOldWardDirect}`;
+                            if (countOfOtherOldWards > 0) {
+                                sápNhapText += ` và ${countOfOtherOldWards} phường/xã khác`;
+                            }
+                            displayHtml += `<span class="text-xs text-gray-500 block">${sápNhapText}</span>`;
+                        }
+                    } else if (item.type === 'district') {
+                        typeText = 'Quận/Huyện';
+                        displayHtml = `<span class="font-semibold">${item.displayName}</span><span class="text-xs text-teal-600 block font-medium">${typeText}</span>`;
+                    } else if (item.type === 'province') {
+                        typeText = 'Tỉnh/Thành phố';
+                        displayHtml = `<span class="font-semibold">${item.displayName}</span><span class="text-xs text-purple-600 block font-medium">${typeText}</span>`;
                     }
-                    return `<li><button onclick='handleSearchResultClick(${stt})' class="w-full text-left p-3 hover:bg-indigo-50 rounded-lg text-gray-700">${displayHtml}</button></li>`;
+                    return `<li><button id="search-result-item-${index}" onclick='handleSearchResultClick(${index})' class="w-full text-left p-3 hover:bg-indigo-50 rounded-lg text-gray-700 focus:outline-none">${displayHtml}</button></li>`;
                 }).join('')}</ul>`;
             }
             resultsPanel.style.display = 'block';
         }
 
-        function handleSearchResultClick(stt) {
-            const feature = wardData.features.find(f => f.properties['STT'] === stt);
-            if (feature) {
-                showResultOnMap(feature);
+        function handleSearchResultClick(index) {
+            if (index < 0 || index >= displayedSearchResults.length) return;
+
+            const item = displayedSearchResults[index];
+            if (item && item.feature) {
+                showResultOnMap(item.feature, item.type);
                 document.getElementById('search-results').style.display = 'none';
-                document.getElementById('wardSearchInput').value = feature.properties['Tên'];
+                document.getElementById('wardSearchInput').value = item.displayName;
             }
         }
 
-        function showResultOnMap(feature) {
-            if (highlightedLayer) {
-                map.removeLayer(highlightedLayer);
+        function showResultOnMap(feature, featureType = 'ward') { // Added featureType
+            if (searchHighlightLayer) {
+                map.removeLayer(searchHighlightLayer);
+                searchHighlightLayer = null;
             }
             if (!feature) {
                 return;
             }
 
-            highlightedLayer = L.geoJSON(feature, {
-                style: { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 }
+            let style, tooltipText;
+            const props = feature.properties;
+
+            if (featureType === 'province') {
+                style = { color: '#800080', weight: 3, opacity: 1, fillOpacity: 0.25, fillColor: '#800080' }; // Purple for province
+                tooltipText = `Tỉnh/TP: ${props.name || 'N/A'}`; // Use 'name' from GeoJSON
+            } else if (featureType === 'district') {
+                style = { color: '#008080', weight: 3, opacity: 1, fillOpacity: 0.3, fillColor: '#008080' }; // Teal for district
+                tooltipText = `Quận/Huyện: ${props.name || 'N/A'}`; // Use 'name' from GeoJSON
+            } else { // Default to ward
+                style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 };
+                const wardName = props['Tên'] || 'N/A';
+                const namePrefix = /xã/i.test(wardName) ? 'Xã' : 'Phường';
+                tooltipText = `${namePrefix} ${wardName}`;
+            }
+
+            searchHighlightLayer = L.geoJSON(feature, { 
+                style: style,
+                interactive: false // Make sure this layer doesn't interfere with ward popups
             });
+            searchHighlightLayer.feature = feature; // Store feature for potential checks
 
-            const wardName = feature.properties['Tên'] || 'N/A';
-            const namePrefix = /xã/i.test(wardName) ? 'Xã' : 'Phường';
-
-            highlightedLayer.bindTooltip(`${namePrefix} ${wardName}`, { permanent: true, direction: 'center', className: 'ward-label' }).addTo(map);
+            searchHighlightLayer.bindTooltip(tooltipText, {
+                permanent: true,
+                direction: 'center',
+                className: 'ward-label', // Can reuse or create new class
+                offset: [0, 0] 
+            }).addTo(map);
 
             const yPadding = (document.getElementById('bottom-bar')?.clientHeight || 100) + 20;
             const xPadding = 20;
-            map.flyToBounds(highlightedLayer.getBounds(), {
+            map.flyToBounds(searchHighlightLayer.getBounds(), {
                 paddingTopLeft: [xPadding, 80],
                 paddingBottomRight: [xPadding, yPadding]
             });
@@ -908,7 +1102,7 @@
             });
 
             // Optional: Add a very simple base layer for context, or none for just the shape
-            L.tileLayer('https://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                  maxZoom: 20 // Adjust maxZoom as needed for the inset scale
             }).addTo(insetMap);
 
@@ -939,9 +1133,91 @@
             }
         }
 
+        function updateTileLayer() {
+            if (!map) return;
 
-        document.getElementById('wardSearchInput').addEventListener('keyup', handleNameSearch);
+            const zoom = map.getZoom();
+            let newTileUrl;
+
+            if (zoom <= 11) { // Zoom 9 and 10 (and anything less if minZoom allows)
+                newTileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png';
+            } else { // Zoom > 10
+                newTileUrl = 'https://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+            }
+
+            if (currentTileLayer) {
+                map.removeLayer(currentTileLayer);
+            }
+
+            currentTileLayer = L.tileLayer(newTileUrl, {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20 // Carto maxZoom is typically 20
+            }).addTo(map);
+        }
+
+        function updateFocusedSearchResult(newIndex) {
+            const resultsPanel = document.getElementById('search-results');
+            if (!resultsPanel || resultsPanel.style.display === 'none' || displayedSearchResults.length === 0) {
+                return;
+            }
+
+            // Remove focus from the previously focused item
+            if (currentFocusedResultIndex !== -1) {
+                const prevFocusedItem = document.getElementById(`search-result-item-${currentFocusedResultIndex}`);
+                if (prevFocusedItem) {
+                    prevFocusedItem.classList.remove('focused-search-result');
+                }
+            }
+
+            currentFocusedResultIndex = newIndex;
+
+            // Add focus to the new item
+            if (currentFocusedResultIndex !== -1) {
+                const newFocusedItem = document.getElementById(`search-result-item-${currentFocusedResultIndex}`);
+                if (newFocusedItem) {
+                    newFocusedItem.classList.add('focused-search-result');
+                    newFocusedItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                }
+            }
+        }
+
+
         document.getElementById('wardSearchInput').addEventListener('focus', handleNameSearch);
+        document.getElementById('wardSearchInput').addEventListener('keyup', (event) => {
+            // Don't re-trigger search if an arrow key (used for navigation) or Enter/Escape was just pressed.
+            // These are handled by the keydown listener.
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === 'Escape') {
+                return;
+            }
+            handleNameSearch(); // Otherwise, proceed with search logic
+        });
+        document.getElementById('wardSearchInput').addEventListener('keydown', (event) => {
+            const resultsPanel = document.getElementById('search-results');
+            if (resultsPanel.style.display !== 'block' || displayedSearchResults.length === 0) {
+                return;
+            }
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                let newIndex = currentFocusedResultIndex + 1;
+                if (newIndex >= displayedSearchResults.length) newIndex = 0; // Loop to top
+                updateFocusedSearchResult(newIndex);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                let newIndex = currentFocusedResultIndex - 1;
+                if (newIndex < 0) newIndex = displayedSearchResults.length - 1; // Loop to bottom
+                updateFocusedSearchResult(newIndex);
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                if (currentFocusedResultIndex !== -1) {
+                    handleSearchResultClick(currentFocusedResultIndex);
+                }
+            } else if (event.key === 'Escape') {
+                resultsPanel.style.display = 'none';
+                updateFocusedSearchResult(-1); // Clear focus
+            }
+        });
 
         document.getElementById('heatmap-controls').addEventListener('click', e => {
             if (e.target.tagName === 'BUTTON') {
@@ -953,8 +1229,23 @@
 
         document.addEventListener('click', function(event) {
             const searchContainer = document.getElementById('search-container');
-            if (!searchContainer.contains(event.target)) {
-                document.getElementById('search-results').style.display = 'none';
+            const resultsPanel = document.getElementById('search-results');
+            const wardSearchInput = document.getElementById('wardSearchInput');
+            const mapContainer = document.getElementById('map');
+
+            const isClickOnPopup = event.target.closest('.leaflet-popup-pane');
+
+            // If the click is outside the search container AND not on a map popup
+            if (!searchContainer.contains(event.target) && !isClickOnPopup) {
+                resultsPanel.style.display = 'none';
+                updateFocusedSearchResult(-1); // Clear visual focus from search list
+
+                // If the click was also not on the map itself, then clear search input and highlight.
+                // Clicks on the map are handled by map.on('click').
+                if (!mapContainer.contains(event.target)) {
+                    wardSearchInput.value = ''; // Clear search input text
+                    showResultOnMap(null);      // Clear map highlight
+                }
             }
         });
 
@@ -988,16 +1279,17 @@
             map.options.maxBoundsViscosity = 1.0; // Make bounds feel like a hard stop
             map.options.minZoom = 9;      // Set a minimum zoom level (e.g., initial zoom)
             map.options.maxZoom = 18;     // Set a maximum zoom level
-
+            
             L.control.zoom({ position: 'topright' }).addTo(map);
 
-            L.tileLayer('https://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                subdomains: 'abcd',
-            }).addTo(map);
+            updateTileLayer(); // Set initial tile layer
 
             map.on('click', () => {
-                showResultOnMap(null);
+                showResultOnMap(null); 
+                document.getElementById('search-results').style.display = 'none';
                 document.getElementById('wardSearchInput').value = '';
+                document.getElementById('wardSearchInput').blur(); // Remove focus from input
+                updateFocusedSearchResult(-1); // Clear visual focus from search list
             });
 
             createWardsLayer();
@@ -1005,6 +1297,7 @@
 
             if (map && conDaoFeatureForInset) { // Add listeners if inset is possible
                 map.on('moveend', updateInsetMapVisibility);
+                map.on('zoomend', updateTileLayer); // Update tile layer on zoom change
                 map.on('zoomend', updateInsetMapVisibility);
             }
             document.getElementById('btn-density').classList.add('active');
