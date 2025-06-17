@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bản đồ Phân tích Dữ liệu Phường/Xã</title>
+    <title>Bản đồ phường xã mới TP HCM</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+    <script src="https://unpkg.com/topojson-client@3"></script>
     <style>
         html,
         body {
@@ -51,12 +51,12 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(255, 255, 255, 0.25); /* 25% trong suốt */
+            background: rgba(255, 255, 255, 0.25);
             backdrop-filter: blur(8px);
             border: 1px solid #e5e7eb;
             border-radius: 0.75rem;
             padding: 0.5rem 1rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         #wardSearchInput {
@@ -77,14 +77,15 @@
             right: 0;
             background: white;
             border-radius: 0.75rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             max-height: 40vh;
             overflow-y: auto;
             border: 1px solid #e5e7eb;
         }
+
         #search-results button.focused-search-result {
-            background-color: #e0e7ff; /* Light indigo background for focus */
-            outline: 2px solid #4f46e5; /* Indigo outline */
+            background-color: #e0e7ff;
+            outline: 2px solid #4f46e5;
             outline-offset: -1px;
         }
 
@@ -96,7 +97,7 @@
             right: 0;
             z-index: 1001;
             padding: 1rem;
-            background: rgba(255, 255, 255, 0.5); /* 50% trong suốt */
+            background: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(8px);
             border-top: 1px solid #e5e7eb;
             display: flex;
@@ -138,7 +139,7 @@
             flex-grow: 1;
             max-width: 300px;
             font-size: 12px;
-            visibility: hidden; /* Dùng visibility để không làm layout bị nhảy */
+            visibility: hidden;
         }
 
         #legend-container .title {
@@ -195,9 +196,11 @@
         @media (max-width: 768px) {
             #bottom-bar {
                 flex-direction: column;
+                flex-direction: column-reverse; /* Move legend to bottom on mobile for better UX */
                 gap: 1rem;
                 padding: 0.75rem;
             }
+
             #legend-container {
                 width: 100%;
                 max-width: none;
@@ -251,7 +254,7 @@
         }
 
         .info-popup .leaflet-popup-content-wrapper {
-            border-radius: 0.75rem;
+            border-radius: 0.5rem; /* Smaller border radius */
             padding: 0;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -259,26 +262,26 @@
 
         .info-popup .leaflet-popup-content {
             margin: 0;
-            font-size: 14px;
+            font-size: 13px; /* Smaller base font size */
         }
 
         .info-popup-header {
             background-color: #f9fafb;
-            padding: 0.75rem 1.25rem;
+            padding: 0.6rem 1rem; /* Reduced padding */
             border-bottom: 1px solid #e5e7eb;
         }
 
         .info-popup-title {
-            font-size: 1.125rem;
+            font-size: 1rem; /* Smaller title font size (16px) */
             font-weight: 700;
             color: #111827;
         }
 
         .info-popup-body {
-            padding: 1rem 1.25rem;
+            padding: 0.75rem 1rem; /* Reduced padding */
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.6rem; /* Reduced gap between items */
         }
 
         .info-line {
@@ -290,7 +293,7 @@
         .info-label {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem; /* Reduced gap for icon and label */
             font-weight: 500;
             color: #4b5563;
         }
@@ -306,13 +309,13 @@
 
         .info-section {
             border-top: 1px solid #f3f4f6;
-            padding-top: 0.75rem;
+            padding-top: 0.6rem; /* Reduced top padding */
             color: #4b5563;
-            line-height: 1.5;
+            line-height: 1.4; /* Tighter line height */
         }
 
         .info-popup-footer {
-            padding: 0.75rem;
+            padding: 0.6rem; /* Reduced padding */
             background-color: #f9fafb;
             border-top: 1px solid #e5e7eb;
         }
@@ -324,49 +327,18 @@
             gap: 0.5rem;
             width: 100%;
             background-color: #4f46e5;
-            color: #ffffff;
-            font-weight: 600;
-            padding: 0.6rem;
+            color: #ffffff !important;
+            font-weight: 500; /* Lighter font weight */
+            padding: 0.5rem; /* Reduced padding */
             border-radius: 0.5rem;
             text-decoration: none;
             transition: background-color 0.2s;
+            font-size: 0.9em; /* Smaller font size for button text */
         }
 
         .navigate-btn:hover {
             background-color: #4338ca;
-        }
-
-        #inset-map-container {
-            position: absolute;
-            bottom: 140px; 
-            right: 20px;
-            width: 150px; 
-            height: 100px; 
-            border: 1px solid #999;
-            background-color: rgba(238,242,247,0.5); /* A slightly different background */
-            z-index: 1000; /* Below main controls (1001), same level as popups */
-            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-            border-radius: 3px;
-            overflow: hidden;
-            display: none; /* Initially hidden, JS will control visibility */
-        }
-        #inset-map-label {
-            position: absolute;
-            top: 5px; /* Adjust as needed */
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.2);
-            color: white;
-            padding: 2px 2px;
-            font-size: 7.5px;
-            font-weight: bold;
-            border-radius: 2px;
-            z-index: 1001; /* Above inset map tiles */
-        }
-
-        #inset-map {
-            width: 100%;
-            height: 100%;
+            color: #ffffff !important
         }
     </style>
 </head>
@@ -375,11 +347,6 @@
 
     <div id="map"></div>
     <div id="loading" class="spinner"></div>
-
-    <div id="inset-map-container">
-        <div id="inset-map-label">Đặc khu Côn Đảo</div>
-        <div id="inset-map"></div>
-    </div>
 
     <div id="top-bar">
         <div id="search-container">
@@ -401,911 +368,600 @@
     </div>
 
     <script>
-        const START_COLOR = { r: 247, g: 251, b: 255 };
-        const END_COLOR = { r: 8, g: 48, b: 107 };
-        const NO_DATA_COLOR = '#cccccc';
-        const DEFAULT_WARD_STYLE = {
-            weight: 1,
-            color: '#0f0f0f', // White border
-            opacity: 0.7,
-            fillColor: 'transparent', // No fill color
-            fillOpacity: 0 // No fill
-        };
+        document.addEventListener('DOMContentLoaded', () => {
 
-        // --- Inset Map Configuration ---
-        // IMPORTANT: User must define how to identify Côn Đảo's feature in their data.
-        // Option 1: By STT (if STT is a unique number for Côn Đảo in your HCMC_data.tsv)
-        const CON_DAO_STT_TARGET = null; // Example: 768 (REPLACE with actual STT number for Côn Đảo or the desired region)
-        // Option 2: By Name (if Côn Đảo has a recognizable name in properties.Tên)
-        const CON_DAO_NAME_TARGET = "Côn Đảo"; // Example: "Côn Đảo" (REPLACE/ADJUST as needed for your data)
-
-        const CON_DAO_INSET_STYLE = { // Style for the feature on the inset map
-            weight: 1, color: '#0f0f0f', opacity: 1, fillColor: '#ff7f7f', fillOpacity: 0
-        };
-
-        // URLs for Province and District GeoJSON files
-        const PROVINCES_GEOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Provinces.geojson';
-        const DISTRICTS_GEOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Districts.geojson';
-
-        let wardData, provinceData, districtData, currentTileLayer; // Added currentTileLayer
-        let map, searchHighlightLayer, wardsLayer, choroplethInfo = {}; // Renamed highlightedLayer
-        let insetMap, conDaoFeatureForInset = null, conDaoLayerOnInset, insetMapContainerElement;
-        let displayedSearchResults = [], currentFocusedResultIndex = -1; // Added currentFocusedResultIndex
-
-        function normalizeString(str) { 
-            // console.log("Original:", str);
-            if (!str) {
-                return '';
-            }
-            let n = str.toLowerCase();
-
-            // Step 1: Diacritics and 'đ'
-            n = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
-            // console.log("After diacritics:", n);
-
-            // Step 2: Convert full Vietnamese terms (now without diacritics) to common short forms or standard forms
-            // "thành phố" (as "thanh pho") -> "tp"
-            n = n.replace(/\bthanh pho\b/g, "tp"); 
-            // "phường" (as "phuong"), "quận" (as "quan"), "huyện" (as "huyen") are already in their desired form.
-            // console.log("After full terms to short forms:", n);
-
-            // Step 3: Handle common abbreviations like "tp.", "p.", "q.", "h."
-            n = n.replace(/\btp\.\b/g, "tp");
-            n = n.replace(/\bp\.\b/g, "phuong");
-            n = n.replace(/\bq\.\b/g, "quan");
-            n = n.replace(/\bh\.\b/g, "huyen");
-            // console.log("After abbreviations:", n);
-
-            // Step 4: Specific normalization for "Ho Chi Minh City" variants
-            // Ensures "tp hcm", "tp ho chi minh" (from various inputs) all become "tp ho chi minh"
-            if (n.startsWith("tp ") && (n.includes("hcm") || n.includes("ho chi minh"))) {
-                 n = n.replace(/\bhcm\b/g, "ho chi minh"); // Replace "hcm" part with "ho chi minh"
-            }
-            // console.log("After HCM normalization:", n);
+            // --- CORRECTED & OPTIMIZED CONFIGURATION ---
+            // These URLs point to your repository. This code assumes you have converted
+            // your .json files to the .topojson format for performance.
+            const WARDS_TOPOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Wards.json';
+            const PROVINCES_TOPOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Provinces.json';
+            const DISTRICTS_TOPOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Districts.json';
             
-            // Step 5: Final cleanup - remove unwanted characters, normalize spaces
-            n = n.replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
-            // console.log("Final normalized:", n);
-            return n;
-        }
+            // The TSV data URL is kept as-is for easy updating.
+            const WARD_DATA_TSV_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Data.tsv';
 
-        function isAccurateMatch(normalizedQuery, normalizedTarget) {
-            if (!normalizedQuery || !normalizedTarget) return false;
+            // --- Other Configurations ---
+            const START_COLOR = { r: 247, g: 251, b: 255 };
+            const END_COLOR = { r: 8, g: 48, b: 107 };
+            const NO_DATA_COLOR = '#cccccc';
+            const DEFAULT_WARD_STYLE = {
+                weight: 1,
+                color: '#0f0f0f',
+                opacity: 0.7,
+                fillColor: 'transparent',
+                fillOpacity: 0
+            };
 
-            const qLen = normalizedQuery.length;
-            const tLen = normalizedTarget.length;
+            // --- DOM ELEMENT REFERENCES ---
+            const loadingSpinner = document.getElementById('loading');
+            const searchInput = document.getElementById('wardSearchInput');
+            const searchResultsPanel = document.getElementById('search-results');
+            const heatmapControls = document.getElementById('heatmap-controls');
+            const legendContainer = document.getElementById('legend-container');
+            const searchContainer = document.getElementById('search-container');
+            const mapDomElement = document.getElementById('map');
+            const densityButton = document.getElementById('btn-density');
 
-            // Case 1: Exact match
-            if (normalizedTarget === normalizedQuery) {
-                return true;
-            }
+            // --- APPLICATION STATE ---
+            let wardData, provinceData, districtData, currentTileLayer;
+            let map, wardsLayer, searchHighlightLayer;
+            let choroplethInfo = {};
+            let displayedSearchResults = [];
+            let currentFocusedResultIndex = -1;
+            let searchDebounceTimer;
 
-            // Case 2: Target starts with query as a whole word/phrase
-            // (e.g., query "an phu" matches target "an phu dong")
-            if (normalizedTarget.startsWith(normalizedQuery)) {
-                if (tLen === qLen || (tLen > qLen && normalizedTarget[qLen] === ' ')) {
-                    return true;
-                }
-            }
+            // --- UTILITY FUNCTIONS ---
+            const setLoading = (isLoading) => {
+                loadingSpinner.style.display = isLoading ? 'block' : 'none';
+            };
 
-            // Case 3: Target ends with query as a whole word/phrase
-            // (e.g., query "an phu" matches target "phuong an phu")
-            if (normalizedTarget.endsWith(normalizedQuery)) {
-                if (tLen === qLen || (tLen > qLen && normalizedTarget[tLen - qLen - 1] === ' ')) {
-                    return true;
-                }
-            }
+            const normalizeString = (() => {
+                const replacements = { 'thanh pho': 'tp', 'tp.': 'tp', 'p.': 'phuong', 'q.': 'quan', 'h.': 'huyen' };
+                const regex = new RegExp(`\\b(${Object.keys(replacements).join('|')})\\b`, 'g');
 
-            // Case 4: Query is a whole word/phrase in the middle of the target
-            // (e.g., query "an phu" matches target "khu dan cu an phu moi")
-            if ((" " + normalizedTarget + " ").includes(" " + normalizedQuery + " ")) {
-                return true;
-            }
-            return false;
-        }
+                return (str) => {
+                    if (!str) return '';
+                    let n = str.toLowerCase();
+                    n = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+                    n = n.replace(regex, match => replacements[match]);
+                    if (n.startsWith("tp ") && (n.includes("hcm") || n.includes("ho chi minh"))) {
+                        n = n.replace(/\bhcm\b/g, "ho chi minh");
+                    }
+                    return n.replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+                };
+            })();
 
-        function setLoading(isLoading) {
-            document.getElementById('loading').style.display = isLoading ? 'block' : 'none';
-        }
-
-        function interpolateColor(color1, color2, factor) {
-            factor = Math.max(0, Math.min(1, factor));
-            const r = Math.round(color1.r + factor * (color2.r - color1.r));
-            const g = Math.round(color1.g + factor * (color2.g - color1.g));
-            const b = Math.round(color1.b + factor * (color2.b - color1.b));
-            return `rgb(${r}, ${g}, ${b})`;
-        }
-
-        function getChoroplethColor(value, key) {
-            const info = choroplethInfo[key];
-            if (!info || typeof value !== 'number' || !isFinite(value)) {
-                return NO_DATA_COLOR;
-            }
-
-            if (info.numBins === 0) { // Should not happen if values exist
-                return NO_DATA_COLOR;
-            }
-
-            if (info.numBins === 1) { // Only one bin, e.g., all values are the same
-                return interpolateColor(START_COLOR, END_COLOR, 0.5); // Use a mid-color
-            }
-
-            const breaks = info.breaks;
-            let binIndex = 0;
-            // Find which bin the value falls into
-            // breaks are upper bounds: val <= breaks[0] is bin 0, breaks[0] < val <= breaks[1] is bin 1, etc.
-            for (let i = 0; i < breaks.length; i++) {
-                if (value <= breaks[i]) {
-                    binIndex = i;
-                    break;
-                }
-                binIndex = i + 1; // If value is greater than breaks[i], it's in the next bin or the last bin
-            }
-
-            // factor is based on the bin index: 0 for the first bin, 1 for the last.
-            const factor = binIndex / (info.numBins - 1);
-            return interpolateColor(START_COLOR, END_COLOR, factor);
-        }
-
-        // --- HÀM LEGEND ĐÃ CẬP NHẬT ---
-        function updateLegend(title, min, max) {
-            const legendDiv = document.getElementById('legend-container');
-            if (!legendDiv) {
-                return;
-            }
-
-            const show = title && typeof min === 'number' && typeof max === 'number';
-            legendDiv.style.visibility = show ? 'visible' : 'hidden';
-            if (!show) return;
-
-            let displayName = title;
-            let unit = '';
-            const unitStartIndex = title.indexOf('(');
-            if (unitStartIndex !== -1) {
-                displayName = title.substring(0, unitStartIndex).trim();
-                unit = title.substring(unitStartIndex);
-            }
-
-            const minLabel = Math.round(min).toLocaleString('vi-VN');
-            const maxLabel = Math.round(max).toLocaleString('vi-VN');
-
-            const startRgb = `rgb(${START_COLOR.r},${START_COLOR.g},${START_COLOR.b})`;
-            const endRgb = `rgb(${END_COLOR.r},${END_COLOR.g},${END_COLOR.b})`;
-            const gradientCss = `linear-gradient(to right, ${startRgb}, ${endRgb})`;
-
-            legendDiv.innerHTML = `
-
-                <div id="legend-bar-wrapper">
-                    <div class="gradient" style="background: ${gradientCss};"></div>
-                    <div id="legend-indicator"></div>
-                    <div id="legend-hover-value"></div>
-                </div>
-                <div class="labels">
-                    <span>${minLabel}</span>
-                    <span>${maxLabel} ${unit}</span>
-                </div>`;
-        }
-
-        function renderMapVisualization() {
-            const activeBtn = document.querySelector('#heatmap-controls button.active');
+            const isAccurateMatch = (query, target) => {
+                if (!query || !target) return false;
+                const qLen = query.length;
+                const tLen = target.length;
+                return target === query ||
+                       (target.startsWith(query) && (tLen === qLen || target[qLen] === ' ')) ||
+                       (target.endsWith(query) && (tLen > qLen && target[tLen - qLen - 1] === ' ')) ||
+                       ` ${target} `.includes(` ${query} `);
+            };
             
-            if (!wardsLayer) return;
+            const formatWardList = (wardString) => {
+                if (!wardString?.trim()) return '';
+                const wards = wardString.split(',').map(w => w.trim()).filter(Boolean);
+                const groupedByDistrict = {};
+                wards.forEach(ward => {
+                    const match = ward.match(/(.+?)\s*\((.+?)\)/);
+                    if (match) {
+                        const [, name, district] = match;
+                        const districtKey = `(${district.trim()})`;
+                        if (!groupedByDistrict[districtKey]) groupedByDistrict[districtKey] = [];
+                        groupedByDistrict[districtKey].push(name.trim());
+                    } else {
+                        if (!groupedByDistrict['Khác']) groupedByDistrict['Khác'] = [];
+                        groupedByDistrict['Khác'].push(ward);
+                    }
+                });
+                return Object.entries(groupedByDistrict).map(([district, names]) => {
+                    if (district === 'Khác') return names.join(', ');
+                    const prefix = names.every(n => n.startsWith('Phường ')) ? 'Phường' : (names.every(n => n.startsWith('Xã ')) ? 'Xã' : '');
+                    if (prefix) {
+                        return `${prefix} ${names.map(n => n.replace(prefix, '').trim()).join(', ')} ${district}`;
+                    }
+                    return `${names.join(', ')} ${district}`;
+                }).join('; ');
+            };
 
-            if (activeBtn && activeBtn.dataset.key) { // A heatmap button is active
-                const categoryKey = activeBtn.dataset.key;
-                if (!choroplethInfo[categoryKey]) {
-                    // Fallback to default style if data for this key is missing
+            // --- MAP VISUALIZATION ---
+            const interpolateColor = (color1, color2, factor) => {
+                const r = Math.round(color1.r + factor * (color2.r - color1.r));
+                const g = Math.round(color1.g + factor * (color2.g - color1.g));
+                const b = Math.round(color1.b + factor * (color2.b - color1.b));
+                return `rgb(${r},${g},${b})`;
+            };
+
+            const getChoroplethColor = (value, key) => {
+                const info = choroplethInfo[key];
+                if (!info || typeof value !== 'number' || !isFinite(value)) return NO_DATA_COLOR;
+                if (info.numBins <= 1) return interpolateColor(START_COLOR, END_COLOR, 0.5);
+                const breaks = info.breaks;
+                let binIndex = breaks.findIndex(b => value <= b);
+                if (binIndex === -1) binIndex = breaks.length;
+                const factor = binIndex / (info.numBins - 1);
+                return interpolateColor(START_COLOR, END_COLOR, factor);
+            };
+
+            const updateLegend = (title, min, max) => {
+                const show = title && typeof min === 'number' && typeof max === 'number';
+                legendContainer.style.visibility = show ? 'visible' : 'hidden';
+                if (!show) return;
+
+                const unitStartIndex = title.indexOf('(');
+                const unit = unitStartIndex !== -1 ? title.substring(unitStartIndex) : '';
+                const minLabel = Math.round(min).toLocaleString('vi-VN');
+                const maxLabel = Math.round(max).toLocaleString('vi-VN');
+                const gradientCss = `linear-gradient(to right, rgb(${START_COLOR.r},${START_COLOR.g},${START_COLOR.b}), rgb(${END_COLOR.r},${END_COLOR.g},${END_COLOR.b}))`;
+
+                legendContainer.innerHTML = `
+                    <div id="legend-bar-wrapper">
+                        <div class="gradient" style="background: ${gradientCss};"></div>
+                        <div id="legend-indicator"></div>
+                        <div id="legend-hover-value"></div>
+                    </div>
+                    <div class="labels">
+                        <span>${minLabel}</span>
+                        <span>${maxLabel} ${unit}</span>
+                    </div>`;
+            };
+            let renderMapVisualization = () => { // Changed const to let
+                const activeBtn = heatmapControls.querySelector('button.active');
+                if (!wardsLayer) return;
+
+                if (activeBtn?.dataset.key) {
+                    const categoryKey = activeBtn.dataset.key;
+                    const info = choroplethInfo[categoryKey];
+                    if (!info) {
+                        wardsLayer.setStyle(DEFAULT_WARD_STYLE);
+                        updateLegend(null);
+                        return;
+                    }
+                    wardsLayer.setStyle(feature => ({
+                        fillColor: getChoroplethColor(feature.properties[categoryKey], categoryKey),
+                        weight: 0.5,
+                        opacity: 1,
+                        color: '#0f0f0f',
+                        fillOpacity: 0.8
+                    }));
+                    updateLegend(categoryKey, info.min, info.max);
+                } else {
                     wardsLayer.setStyle(DEFAULT_WARD_STYLE);
                     updateLegend(null);
-                    return;
                 }
-                const info = choroplethInfo[categoryKey];
-                wardsLayer.setStyle(feature => ({
-                    fillColor: getChoroplethColor(feature.properties[categoryKey], categoryKey),
-                    weight: 0.5,
-                    opacity: 1,
-                    color: '#0f0f0f', // Border color for heatmap cells
-                    fillOpacity: 0.8
-                }));
-                updateLegend(categoryKey, info.min, info.max);
-            } else { // "Boundaries" button is active or no specific heatmap button is active
-                wardsLayer.setStyle(DEFAULT_WARD_STYLE);
-                updateLegend(null);
-            }
-        }
-        async function loadData() {
-            try {
-                const [
-                    geoRes, dataRes,
-                    provincesRes, districtsRes
-                ] = await Promise.all([
-                    fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_v4.geojson'),
-                    fetch('https://raw.githubusercontent.com/lqtue/phuongnao/main/HCMC_data.tsv'),
-                    fetch(PROVINCES_GEOJSON_URL),
-                    fetch(DISTRICTS_GEOJSON_URL)
-                ]);
-
-                if (!geoRes.ok || !dataRes.ok || !provincesRes.ok || !districtsRes.ok) {
-                    throw new Error(`Network Error`);
-                }
-                const geojsonData = await geoRes.json();
-                const tsvData = parseTSV(await dataRes.text());
-                provinceData = await provincesRes.json(); // Store province data
-                districtData = await districtsRes.json(); // Store district data
-
-                const dataMap = new Map(tsvData.map(row => [row['STT'], row]));
-                geojsonData.features.forEach(f => Object.assign(f.properties, dataMap.get(f.properties['STT'])));
-                wardData = geojsonData;
-
-                // Try to find the feature for the inset map (e.g., Côn Đảo)
-                if (CON_DAO_STT_TARGET !== null) {
-                    conDaoFeatureForInset = wardData.features.find(f => f.properties.STT === CON_DAO_STT_TARGET);
-                }
-                if (!conDaoFeatureForInset && CON_DAO_NAME_TARGET) {
-                    const normalizedTargetName = normalizeString(CON_DAO_NAME_TARGET);
-                    conDaoFeatureForInset = wardData.features.find(f => {
-                        const featureName = f.properties['Tên'];
-                        return featureName && normalizeString(featureName).includes(normalizedTargetName);
+            };
+            
+            // --- DATA HANDLING ---
+            const parseTSV = (tsvText) => {
+                const lines = tsvText.trim().split(/\r?\n/);
+                const headers = lines[0].split('\t').map(h => h.trim());
+                return lines.slice(1).map(line => {
+                    const values = line.split('\t');
+                    const rowObject = {};
+                    headers.forEach((header, i) => {
+                        const value = values[i] || '';
+                        rowObject[header] = isNaN(parseFloat(value)) ? value.trim() : parseFloat(value);
                     });
+                    return rowObject;
+                }).filter(obj => obj.STT);
+            };
+
+            const loadData = async () => {
+                try {
+                    const responses = await Promise.all([
+                        fetch(WARDS_TOPOJSON_URL),
+                        fetch(WARD_DATA_TSV_URL),
+                        fetch(PROVINCES_TOPOJSON_URL),
+                        fetch(DISTRICTS_TOPOJSON_URL)
+                    ]);
+
+                    if (responses.some(res => !res.ok)) throw new Error('Network response was not ok. Check file URLs.');
+
+                    const wardsTopo = await responses[0].json();
+                    const tsvText = await responses[1].text();
+                    const provincesTopo = await responses[2].json();
+                    const districtsTopo = await responses[3].json();
+
+                    // Convert TopoJSON to GeoJSON. This code gets the first object key automatically.
+                    const parsedGeojsonData = topojson.feature(wardsTopo, Object.keys(wardsTopo.objects)[0]);
+                    provinceData = topojson.feature(provincesTopo, Object.keys(provincesTopo.objects)[0]);
+                    districtData = topojson.feature(districtsTopo, Object.keys(districtsTopo.objects)[0]);
+
+                    // The original TSV parsing and merging logic is kept as requested.
+                    const tsvData = parseTSV(tsvText);
+                    const dataMap = new Map(tsvData.map(row => [row.STT, row]));
+                    parsedGeojsonData.features.forEach(f => Object.assign(f.properties, dataMap.get(f.properties.STT)));
+                    wardData = parsedGeojsonData;
+
+                    prepareChoroplethData();
+                } catch (error) {
+                    setLoading(false);
+                    alert(`Lỗi tải dữ liệu: ${error.message}`);
+                    throw error;
                 }
-                if (!conDaoFeatureForInset) {
-                    console.warn(`Feature for inset map (e.g., Côn Đảo with STT '${CON_DAO_STT_TARGET}' or name '${CON_DAO_NAME_TARGET}') not found. Inset map will not be displayed.`);
-                }
-                prepareChoroplethData();
-            } catch (e) {
-                setLoading(false);
-                alert(`Lỗi tải dữ liệu: ${e.message}`);
-                throw e;
-            }
-        }
+            };
 
-        function parseTSV(tsvText) {
-            const lines = tsvText.trim().split(/\r?\n/);
-            const headers = lines[0].split('\t').map(h => h.trim());
-            const rows = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (lines[i].trim() === '') {
-                    continue;
-                }
-                const values = lines[i].split('\t');
-                const rowObject = {};
-                for (let j = 0; j < headers.length; j++) {
-                    rowObject[headers[j]] = isNaN(parseFloat(values[j])) ? (values[j] || '').trim() : parseFloat(values[j]);
-                }
-                rows.push(rowObject);
-            }
-            return rows;
-        }
-
-        function prepareChoroplethData() {
-            const keys = ['Mật độ (người/km2)', 'Dân số (người)', 'Diện tích (km2)'];
-            const NUM_QUANTILES = 10; // Desired number of quantiles (bins)
-
-            keys.forEach(key => {
-                const values = wardData.features
-                    .map(f => f.properties[key])
-                    .filter(v => typeof v === 'number' && isFinite(v))
-                    .sort((a, b) => a - b);
-
-                if (values.length === 0) {
-                    choroplethInfo[key] = { min: 0, max: 0, breaks: [], numBins: 0 };
-                    return;
-                }
-
-                const minVal = values[0];
-                const maxVal = values[values.length - 1];
-                const breaks = [];
-
-                if (minVal === maxVal || values.length < NUM_QUANTILES) {
-                    // Not enough distinct values or data for full quantiles.
-                    // Create breaks from unique sorted values (up to NUM_QUANTILES-1 breaks)
-                    // The breaks are the upper bounds of the bins.
-                    const uniqueSortedValues = [...new Set(values)].sort((a, b) => a - b);
-                    for (let i = 0; i < uniqueSortedValues.length - 1 && breaks.length < NUM_QUANTILES - 1; i++) {
-                        breaks.push(uniqueSortedValues[i]);
+            const prepareChoroplethData = () => {
+                const keys = ['Mật độ (người/km2)', 'Dân số (người)', 'Diện tích (km2)'];
+                const NUM_QUANTILES = 10;
+                keys.forEach(key => {
+                    const values = wardData.features
+                        .map(f => f.properties[key])
+                        .filter(v => typeof v === 'number' && isFinite(v))
+                        .sort((a, b) => a - b);
+                    if (values.length === 0) {
+                        choroplethInfo[key] = { min: 0, max: 0, breaks: [], numBins: 0 };
+                        return;
                     }
-                     // Ensure the last unique value is a break if we still have few breaks and it's not already the last one
-                    if (uniqueSortedValues.length > breaks.length +1 && breaks.length < NUM_QUANTILES -1 && uniqueSortedValues[uniqueSortedValues.length-1] !== breaks[breaks.length-1]) {
-                        breaks.push(uniqueSortedValues[uniqueSortedValues.length-1]);
-                    }
-                } else {
-                    // Calculate NUM_QUANTILES - 1 break points.
-                    const n = values.length;
-                    for (let i = 1; i < NUM_QUANTILES; i++) {
-                        const rank = Math.ceil(n * i / NUM_QUANTILES) - 1;
-                        const potentialBreak = values[Math.min(rank, n - 1)];
-                        if (breaks.length === 0 || potentialBreak > breaks[breaks.length - 1]) {
-                            breaks.push(potentialBreak);
-                        } else if (potentialBreak === breaks[breaks.length - 1] && breaks.length < NUM_QUANTILES - 1) {
-                             // If duplicate, try to find the next distinct value if we still need more breaks
-                            for (let j = rank + 1; j < n && values[j] === potentialBreak; j++) { rank++; } // Skip duplicates
-                            if (rank +1 < n && values[rank+1] > breaks[breaks.length-1]) breaks.push(values[rank+1]);
+                    const uniqueSortedValues = [...new Set(values)];
+                    const minVal = values[0];
+                    const maxVal = values[values.length - 1];
+                    let breaks = [];
+                    if (uniqueSortedValues.length < NUM_QUANTILES) {
+                        breaks = uniqueSortedValues.slice(0, -1);
+                    } else {
+                        for (let i = 1; i < NUM_QUANTILES; i++) {
+                            const index = Math.ceil(values.length * i / NUM_QUANTILES) - 1;
+                            const potentialBreak = values[Math.min(index, values.length - 1)];
+                            if (breaks.length === 0 || potentialBreak > breaks[breaks.length - 1]) {
+                                breaks.push(potentialBreak);
+                            }
                         }
                     }
-                }
-                // Ensure the very last break is indeed the max value if it wasn't included and we have space
-                if (breaks.length > 0 && breaks[breaks.length-1] < maxVal && breaks.length < NUM_QUANTILES -1) {
-                    breaks.push(maxVal);
-                }
-                 // Remove duplicates and sort, ensure maxVal is the absolute last break if it's part of breaks.
-                const finalBreaks = [...new Set(breaks)].sort((a,b) => a-b);
-                if (finalBreaks.length > 0 && finalBreaks[finalBreaks.length-1] !== maxVal && !finalBreaks.includes(maxVal) && finalBreaks.length < NUM_QUANTILES -1) {
-                    finalBreaks.push(maxVal);
-                    finalBreaks.sort((a,b)=>a-b);
-                }
+                    if (breaks.length > 0 && breaks[breaks.length - 1] < maxVal) {
+                        breaks.push(maxVal);
+                    }
+                    breaks = [...new Set(breaks)].sort((a, b) => a - b);
+                    choroplethInfo[key] = { min: minVal, max: maxVal, breaks, numBins: breaks.length + 1 };
+                });
+            };
 
+            // --- EVENT HANDLERS & POPUPS ---
+            const onWardMouseover = (e) => {
+                const activeBtn = heatmapControls.querySelector('button.active');
+                if (!activeBtn?.dataset.key) return;
+                const key = activeBtn.dataset.key;
+                const value = e.target.feature.properties[key];
+                const info = choroplethInfo[key];
+                const indicator = document.getElementById('legend-indicator');
+                const hoverValue = document.getElementById('legend-hover-value');
+                if (!indicator || typeof value !== 'number' || !info || info.max <= info.min) return;
+                const percent = (value - info.min) / (info.max - info.min) * 100;
+                indicator.style.left = `${percent}%`;
+                indicator.style.display = 'block';
+                hoverValue.innerText = Math.round(value).toLocaleString('vi-VN');
+                hoverValue.style.left = `${percent}%`;
+                hoverValue.style.display = 'block';
+            };
 
-                choroplethInfo[key] = {
-                    min: minVal,
-                    max: maxVal,
-                    breaks: finalBreaks,
-                    numBins: finalBreaks.length + 1
-                };
-            });
-        }
-
-        function onWardMouseover(e) {
-            const properties = e.target.feature.properties;
-            const activeBtn = document.querySelector('#heatmap-controls button.active');
-            if (!activeBtn || !activeBtn.dataset.key) { // If no active button or it's not a heatmap button
-                return;
-            }
-            const key = activeBtn.dataset.key;
-            const value = properties[key];
-            const info = choroplethInfo[key];
-            const indicator = document.getElementById('legend-indicator');
-            const hoverValue = document.getElementById('legend-hover-value');
-            if (!indicator || typeof value !== 'number' || !info) {
-                return;
-            }
-            const percent = (info.max > info.min) ? (value - info.min) / (info.max - info.min) * 100 : 0;
-            indicator.style.left = `${percent}%`;
-            indicator.style.display = 'block';
-            hoverValue.innerText = Math.round(value).toLocaleString('vi-VN');
-            hoverValue.style.left = `${percent}%`;
-            hoverValue.style.display = 'block';
-        }
-
-        function onWardMouseout(e) {
-            const indicator = document.getElementById('legend-indicator');
-            const hoverValue = document.getElementById('legend-hover-value');
-            if (indicator) {
-                indicator.style.display = 'none';
-            }
-            if (hoverValue) {
-                hoverValue.style.display = 'none';
-            }
-        }
-
-        function createPopupContent(props) {
-            const name = props['Tên'] || 'N/A';
-            const type = /xã/i.test(name) ? 'Xã' : 'Phường';
-            const population = props['Dân số (người)'] ? props['Dân số (người)'].toLocaleString('vi-VN') : 'N/A';
-            const area = props['Diện tích (km2)'] ? props['Diện tích (km2)'].toFixed(2) + ' km²' : 'N/A';
-            const density = props['Mật độ (người/km2)'] ? Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN') : 'N/A';
-            const headquarters = props['Full Address 1'] || 'Chưa có thông tin';
-            const lat = props['Latitude 1'];
-            const lon = props['Longitude 1'];
-            let html = `<div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>`;
-            html += `<div class="info-popup-body">`;
-            html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i> <span>Dân số</span></div> <div class="info-value">${population}</div></div>`;
-            html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i> <span>Diện tích</span></div> <div class="info-value">${area}</div></div>`;
-            html += `<div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i> <span>Mật độ</span></div> <div class="info-value">${density}</div></div>`;
-            html += `<div class="info-section"><div class="info-label"><i class="fa-solid fa-location-dot fa-fw"></i> <span>Trụ sở</span></div>${headquarters}</div>`;
-            html += `</div>`;
-            if (lat && lon) {
-                const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-                html += `<div class="info-popup-footer"><a href="${navUrl}" target="_blank" class="navigate-btn"><i class="fa-solid fa-diamond-turn-right fa-fw"></i> Chỉ đường</a></div>`;
-            }
-            return html;
-        }
-
-        function createWardsLayer() {
-            wardsLayer = L.geoJSON(wardData, {
-                style: DEFAULT_WARD_STYLE, // Use the default style initially
-                onEachFeature: (feature, layer) => {
-                    const props = feature.properties;
-                    const name = props['Tên'] || 'N/A';
-                    const type = /xã/i.test(name) ? 'Xã' : 'Phường';
-                    layer.bindTooltip(`${type} ${name}`);
-                    layer.on({
-                        mouseover: onWardMouseover,
-                        mouseout: onWardMouseout,
-                        click: (e) => {
-                            L.DomEvent.stopPropagation(e); // Prevent map.on('click') from firing
-                            showResultOnMap(null); // Clear any previous search highlight
-
-                            // Clear search input and hide results list, as this click signifies a new focus
-                            document.getElementById('wardSearchInput').value = '';
-                            document.getElementById('search-results').style.display = 'none';
-                            updateFocusedSearchResult(-1); // Clear visual focus from search list
-
-                            const yPadding = document.getElementById('bottom-bar')?.clientHeight || 100;
-                            L.popup({ className: 'info-popup', autoPanPadding: L.point(10, yPadding + 10) })
-                                .setLatLng(e.latlng)
-                                .setContent(createPopupContent(feature.properties))
-                                .openOn(map);
-                        }
-                    });
-                }
-            }).addTo(map);
-        }
-
-
-        function handleNameSearch() {
-            if (!wardData) {
-                return;
-            }
-            currentFocusedResultIndex = -1; // Reset focused index on new search
+            const onWardMouseout = () => {
+                const indicator = document.getElementById('legend-indicator');
+                const hoverValue = document.getElementById('legend-hover-value');
+                if (indicator) indicator.style.display = 'none';
+                if (hoverValue) hoverValue.style.display = 'none';
+            };
             
-            const query = document.getElementById('wardSearchInput').value;
-            const resultsPanel = document.getElementById('search-results');
-            if (query.trim().length < 2) {
-                resultsPanel.style.display = 'none';
-                showResultOnMap(null); // Clear highlight if query is too short
-                return;
-            }
-            const normalizedQuery = normalizeString(query);
+            const onEachFeatureForWardLayer = (feature, layer) => {
+                const { 'Tên': name = 'N/A' } = feature.properties;
+                layer.bindTooltip(`${/xã/i.test(name) ? 'Xã' : 'Phường'} ${name}`);
+                layer.on({
+                    mouseover: onWardMouseover,
+                    mouseout: onWardMouseout,
+                    click: (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        searchInput.value = '';
+                        searchResultsPanel.style.display = 'none';
+                        updateFocusedSearchResult(-1);
+                        showResultOnMap(feature, 'ward', false); // Highlight on main map
             
-            // --- Step 1: Gather all admin matches (Provinces and Districts) ---
-            let adminMatches = [];
-            const adminSources = [
-                { data: provinceData, type: 'province' },
-                { data: districtData, type: 'district' }
-            ];
+                        const topBarElement = document.getElementById('top-bar');
+                        const bottomBarElement = document.getElementById('bottom-bar');
+                        const topBarHeight = topBarElement ? topBarElement.offsetHeight : 75;
+                        const bottomBarHeight = bottomBarElement ? bottomBarElement.offsetHeight : 120;
+                        const horizontalPopupMarginFromEdge = 20;
+                        const verticalPopupMarginFromBar = 15;
+                        const popupActualPaddingTop = topBarHeight + verticalPopupMarginFromBar;
+                        const popupActualPaddingBottom = bottomBarHeight + verticalPopupMarginFromBar;
+            
+                        L.popup({ className: 'info-popup', autoPanPaddingTopLeft: L.point(horizontalPopupMarginFromEdge, popupActualPaddingTop), autoPanPaddingBottomRight: L.point(horizontalPopupMarginFromEdge, popupActualPaddingBottom)})
+                            .setLatLng(e.latlng)
+                            .setContent(createPopupContent(feature.properties))
+                            .openOn(map); // targetMapInstance is map here
+                    }
+                });
+            };
 
-            for (const source of adminSources) {
-                if (source.data && source.data.features) {
+            const createPopupContent = (props) => {
+                const name = props?.['Tên'] ?? 'N/A';
+                const type = /xã/i.test(name) ? 'Xã' : 'Phường';
+                const population = props?.['Dân số (người)']?.toLocaleString('vi-VN') ?? 'N/A';
+                const area = props?.['Diện tích (km2)'] ? `${props['Diện tích (km2)'].toFixed(2)} km²` : 'N/A';
+                const density = props?.['Mật độ (người/km2)'] ? `${Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN')} ng/km²` : 'N/A';
+                const mergedAllText = formatWardList(props['Sáp nhập toàn bộ từ']);
+                const mergedPartialText = formatWardList(props['Sáp nhập một phần từ']);
+                let mergedWardsText = 'Không';
+                if (mergedAllText || mergedPartialText) {
+                    mergedWardsText = [
+                        mergedAllText ? `toàn bộ ${mergedAllText}` : '',
+                        mergedPartialText ? `một phần ${mergedPartialText}` : ''
+                    ].filter(Boolean).join('; và ');
+                }
+                const headquarters = props?.['Full Address 1'] ?? 'Chưa có thông tin';
+                const lat = props?.['Latitude 1'];
+                const lon = props?.['Longitude 1'];
+                const navUrl = (lat && lon) ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
+                return `
+                    <div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>
+                    <div class="info-popup-body">
+                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i><span>Dân số</span></div><div class="info-value">${population}</div></div>
+                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i><span>Diện tích</span></div><div class="info-value">${area}</div></div>
+                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i><span>Mật độ</span></div><div class="info-value">${density}</div></div>
+                        <div class="info-section"><div class="info-label"><i class="fa-solid fa-code-merge fa-fw"></i><span>Sáp nhập</span></div>${mergedWardsText}</div>
+                        <div class="info-section"><div class="info-label"><i class="fa-solid fa-location-dot fa-fw"></i><span>Trụ sở</span></div>${headquarters}</div>
+                    </div>
+                    ${navUrl ? `<div class="info-popup-footer"><a href="${navUrl}" target="_blank" class="navigate-btn"><i class="fa-solid fa-diamond-turn-right fa-fw"></i> Chỉ đường đến trụ sở</a></div>` : ''}
+                `;
+            };
+
+            // --- SEARCH FUNCTIONALITY ---
+            const getAdminMatches = (normalizedQuery) => {
+                const matches = [];
+                const sources = [{ data: provinceData, type: 'province' }, { data: districtData, type: 'district' }];
+                for (const source of sources) {
+                    if (!source.data || !source.data.features) continue;
                     for (const feature of source.data.features) {
                         const adminName = feature.properties.name || '';
                         const normalizedAdminName = normalizeString(adminName);
-                        let isMatch = false;
-
-                        if (normalizedAdminName === normalizedQuery) { // Exact normalized name match
-                            isMatch = true;
-                        } else if (normalizedQuery.startsWith("tp ") && normalizedAdminName === normalizedQuery.substring(3).trim()) { // Query "tp X", data "X"
-                            isMatch = true;
-                        } else if (normalizedQuery.startsWith("quan ") && normalizedAdminName === normalizedQuery.substring(5).trim()) { // Query "quan X", data "X"
-                            isMatch = true;
-                        } else if (normalizedQuery.startsWith("huyen ") && normalizedAdminName === normalizedQuery.substring(6).trim()) { // Query "huyen X", data "X"
-                            isMatch = true;
-                        } else if (isAccurateMatch(normalizedQuery, normalizedAdminName)) { // General fuzzy match (e.g., query "X", data "tp X")
-                            isMatch = true;
-                        }
-
-                        if (isMatch) {
-                            adminMatches.push({
-                                feature: feature,
-                                type: source.type,
-                                displayName: adminName,
-                                normalizedDisplayName: normalizedAdminName
-                            });
+                        if (isAccurateMatch(normalizedQuery, normalizedAdminName)) {
+                            matches.push({ feature, type: source.type, displayName: adminName, normalizedDisplayName: normalizedAdminName, priority: source.type === 'province' ? 0 : 1 });
                         }
                     }
                 }
-            }
+                return matches;
+            };
 
-            // --- Step 2: Determine if wards should be suppressed and select admin results ---
-            let suppressWards = false;
-            let finalAdminDisplayItems = [];
-
-            const queryIsPrefixed = normalizedQuery.startsWith("tp ") || normalizedQuery.startsWith("quan ") || normalizedQuery.startsWith("huyen ");
-
-            if (queryIsPrefixed) {
-                // Query looks like "tp X", "quan X", or "huyen X"
-                const queryNamePart = normalizedQuery.substring(normalizedQuery.indexOf(" ") + 1).trim();
-                
-                finalAdminDisplayItems = adminMatches.filter(item => 
-                    item.normalizedDisplayName === queryNamePart ||  // Admin data is "X"
-                    item.normalizedDisplayName === normalizedQuery   // Admin data is "tp X" / "quan X" / "huyen X"
-                );
-                if (finalAdminDisplayItems.length > 0) {
-                    suppressWards = true;
+            const getWardMatches = (normalizedQuery) => {
+                const matches = [];
+                if (!wardData || !wardData.features) return matches;
+                wardData.features.forEach(feature => {
+                    const props = feature.properties;
+                    const newName = props['Tên'] || '';
+                    const normalizedNewName = normalizeString(newName);
+                    const oldWardsAll = (props['Sáp nhập toàn bộ từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+                    const oldWardsPartial = (props['Sáp nhập một phần từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
+                    const allOldWards = [...oldWardsAll, ...oldWardsPartial];
+                    let matchedOldWardDirect = null;
+                    for (const ow of allOldWards) {
+                        if (isAccurateMatch(normalizedQuery, normalizeString(ow))) { matchedOldWardDirect = ow; break; }
+                    }
+                    const matchedViaNewName = isAccurateMatch(normalizedQuery, normalizedNewName);
+                    if (matchedViaNewName || matchedOldWardDirect) {
+                        matches.push({ feature, type: 'ward', displayName: newName, matchedOldWardDirect, matchedViaNewName, priority: matchedOldWardDirect ? 2 : 3 });
+                    }
+                });
+                return matches;
+            };
+            
+            const handleNameSearch = () => {
+                currentFocusedResultIndex = -1;
+                const query = searchInput.value;
+                if (query.trim().length < 2) {
+                    searchResultsPanel.style.display = 'none';
+                    showResultOnMap(null);
+                    return;
                 }
-            } else { 
-                // Query is generic (e.g., "Tân Uyên")
-                // Suppress wards if an admin item's normalized name *exactly* matches the generic query
-                finalAdminDisplayItems = adminMatches.filter(item => item.normalizedDisplayName === normalizedQuery);
-                if (finalAdminDisplayItems.length > 0) {
-                    suppressWards = true;
+                const normalizedQuery = normalizeString(query);
+                const adminMatches = getAdminMatches(normalizedQuery);
+                const wardMatches = getWardMatches(normalizedQuery);
+                const hasExactAdminMatch = adminMatches.some(m => m.normalizedDisplayName === normalizedQuery);
+                if (hasExactAdminMatch) {
+                    displayedSearchResults = adminMatches.filter(m => m.normalizedDisplayName === normalizedQuery);
+                } else {
+                    displayedSearchResults = [...adminMatches, ...wardMatches];
                 }
-            }
-
-            // --- Step 3: Build displayedSearchResults ---
-            if (suppressWards) {
-                displayedSearchResults = finalAdminDisplayItems; // Only these specific admin matches
-            } else {
-                // No suppression, or suppression condition not met strongly enough.
-                // Show all adminMatches found by any criteria.
-                displayedSearchResults = [...adminMatches]; 
-
-                // Proceed to Ward Search
-                if (wardData && wardData.features) {
-                    wardData.features.forEach(feature => {
-                        const props = feature.properties;
-                        // Ensure 'Tên' exists and is a string before calling normalizeString
-                        const newName = props['Tên'] || '';
-                        const normalizedNewName = normalizeString(newName);
-                        let matchedOldWardDirect = null;
-
-                        const oldWardsAll = (props['Sáp nhập toàn bộ từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
-                        const oldWardsPartial = (props['Sáp nhập một phần từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
-                        const allOldWards = [...oldWardsAll, ...oldWardsPartial];
-
-                        for (const ow of allOldWards) {
-                            // Ensure 'ow' is a string before calling normalizeString
-                            if (typeof ow === 'string' && isAccurateMatch(normalizedQuery, normalizeString(ow))) {
-                                matchedOldWardDirect = ow;
-                                break;
-                            }
+                displayedSearchResults.sort((a, b) => {
+                    if (a.priority !== b.priority) return a.priority - b.priority;
+                    return normalizeString(a.displayName).localeCompare(normalizeString(b.displayName));
+                });
+                renderSearchResults();
+            };
+            
+            const renderSearchResults = () => {
+                if (searchHighlightLayer) { map.removeLayer(searchHighlightLayer); searchHighlightLayer = null; }
+                if (displayedSearchResults.length === 0) {
+                    searchResultsPanel.innerHTML = `<p class="p-4 text-center text-gray-500">Không tìm thấy kết quả.</p>`;
+                } else {
+                    const listHtml = displayedSearchResults.map((item, index) => {
+                        let displayHtml, typeText, typeColor;
+                        if (item.type === 'ward') {
+                            typeText = 'Phường/Xã mới'; typeColor = 'text-indigo-500';
+                            displayHtml = `<span class="font-semibold">${item.displayName}</span>`;
+                            displayHtml += `<span class="text-xs ${typeColor} block font-medium">${typeText}</span>`;
+                            if (item.matchedOldWardDirect) { displayHtml += `<span class="text-xs text-gray-500 block">Sáp nhập từ ${item.matchedOldWardDirect}</span>`; }
+                        } else {
+                            typeText = item.type === 'district' ? 'Quận/Huyện' : 'Tỉnh/Thành phố';
+                            typeColor = item.type === 'district' ? 'text-teal-600' : 'text-purple-600';
+                            displayHtml = `<span class="font-semibold">${item.displayName}</span><span class="text-xs ${typeColor} block font-medium">${typeText}</span>`;
                         }
-                        const matchedViaNewName = isAccurateMatch(normalizedQuery, normalizedNewName);
-
-                        if (matchedViaNewName || matchedOldWardDirect) {
-                            displayedSearchResults.push({ 
-                                feature: feature,
-                                type: 'ward',
-                                displayName: newName,
-                                matchedOldWardDirect: matchedOldWardDirect,
-                                matchedViaNewName: matchedViaNewName
-                            });
-                        }
+                        return `<li><button id="search-result-item-${index}" onclick="window.handleSearchResultClick(${index})" class="w-full text-left p-3 hover:bg-indigo-50 rounded-lg text-gray-700 focus:outline-none">${displayHtml}</button></li>`;
+                    }).join('');
+                    searchResultsPanel.innerHTML = `<ul class="space-y-1 p-2">${listHtml}</ul>`;
+                }
+                searchResultsPanel.style.display = 'block';
+            };
+            
+            window.handleSearchResultClick = (index) => {
+                if (index < 0 || index >= displayedSearchResults.length) return;
+                const item = displayedSearchResults[index];
+                if (item?.feature) {
+                    showResultOnMap(item.feature, item.type, true);
+                    searchResultsPanel.style.display = 'none';
+                    searchInput.value = item.displayName;
+                }
+            };
+            
+            const showResultOnMap = (feature, featureType = 'ward', shouldZoom = true) => {
+                if (searchHighlightLayer) map.removeLayer(searchHighlightLayer);
+                searchHighlightLayer = null;
+                if (!feature) return;
+                let style, tooltipText;
+                const props = feature.properties;
+                switch (featureType) {
+                    case 'province': style = { color: '#800080', weight: 3, opacity: 1, fillOpacity: 0.25, fillColor: '#800080' }; tooltipText = `Tỉnh/TP: ${props.name || 'N/A'}`; break;
+                    case 'district': style = { color: '#008080', weight: 3, opacity: 1, fillOpacity: 0.3, fillColor: '#008080' }; tooltipText = `Quận/Huyện: ${props.name || 'N/A'}`; break;
+                    default: style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 }; const wardName = props['Tên'] || 'N/A'; tooltipText = `${/xã/i.test(wardName) ? 'Xã' : 'Phường'} ${wardName}`;
+                }
+                searchHighlightLayer = L.geoJSON(feature, { style, interactive: false }).addTo(map);
+                // const yPadding = (document.getElementById('bottom-bar')?.clientHeight || 100) + 20;
+                // map.flyToBounds(searchHighlightLayer.getBounds(), { paddingTopLeft: [20, 80], paddingBottomRight: [20, yPadding] });
+                if (shouldZoom) {
+                    const bottomBarElement = document.getElementById('bottom-bar');
+                    const horizontalFlyToPadding = 20;
+                    const verticalFlyToPaddingFromBar = 20;
+                    const flyToActualPaddingTop = 80;
+                    const flyToActualPaddingBottom = (bottomBarElement ? bottomBarElement.offsetHeight : 120) + verticalFlyToPaddingFromBar;
+                    map.flyToBounds(searchHighlightLayer.getBounds(), {
+                        paddingTopLeft: L.point(horizontalFlyToPadding, flyToActualPaddingTop),
+                        paddingBottomRight: L.point(horizontalFlyToPadding, flyToActualPaddingBottom)
                     });
                 }
-            }
+            };
+            
+            const updateFocusedSearchResult = (newIndex) => {
+                if (searchResultsPanel.style.display === 'none' || displayedSearchResults.length === 0) return;
+                if (currentFocusedResultIndex !== -1) { document.getElementById(`search-result-item-${currentFocusedResultIndex}`)?.classList.remove('focused-search-result'); }
+                currentFocusedResultIndex = newIndex;
+                if (currentFocusedResultIndex !== -1) {
+                    const newFocusedItem = document.getElementById(`search-result-item-${currentFocusedResultIndex}`);
+                    if (newFocusedItem) { newFocusedItem.classList.add('focused-search-result'); newFocusedItem.scrollIntoView({ block: 'nearest' }); }
+                }
+            };
 
-            // Sort displayedSearchResults:
-            // Priority: Ward (old) > Ward (new) > District > Province, then alphabetically
-            displayedSearchResults.sort((a, b) => {
-                const getPriority = (item) => {
-                    if (item.type === 'province') return 0; // Highest priority
-                    if (item.type === 'district') return 1; // Second highest
-                    if (item.type === 'ward' && item.matchedOldWardDirect) return 2; // Ward matched by old name
-                    if (item.type === 'ward') return 3; // Ward matched by new name
-                    return 4; // Should ideally not happen
+            // --- MAP INITIALIZATION & LAYERS ---
+            const createWardsLayer = () => {
+                wardsLayer = L.geoJSON(wardData, {
+                    style: DEFAULT_WARD_STYLE,
+                    onEachFeature: (feature, layer) => {
+                        onEachFeatureForWardLayer(feature, layer);
+                    }
+                }).addTo(map);
+            };
+
+            const updateTileLayer = () => {
+                if (!map) return;
+                const zoom = map.getZoom();
+                const newTileUrl = zoom <= 11 
+                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png' 
+                    : 'https://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+                
+                // Check if the currentTileLayer exists and if its URL is different from the new one
+                if (currentTileLayer && currentTileLayer._url === newTileUrl) {
+                    return; // No need to update if the URL is the same
+                }
+
+                if (currentTileLayer) {
+                    map.removeLayer(currentTileLayer);
+                }
+                currentTileLayer = L.tileLayer(newTileUrl, { attribution: '© OpenStreetMap contributors © CARTO', subdomains: 'abcd', maxZoom: 20 }).addTo(map);
+                if (wardsLayer) wardsLayer.bringToFront(); // Ensure vector layers are on top
+                if (searchHighlightLayer) searchHighlightLayer.bringToFront();
+            };
+
+            const originalRenderMapVisualization = renderMapVisualization; // Keep a reference if needed or integrate directly
+            renderMapVisualization = () => { // Override or redefine
+                const activeBtn = heatmapControls.querySelector('button.active');
+                const styleForFeature = feature => {
+                    if (activeBtn?.dataset.key) {
+                        const categoryKey = activeBtn.dataset.key;
+                        return { fillColor: getChoroplethColor(feature.properties[categoryKey], categoryKey), weight: 0.5, opacity: 1, color: '#0f0f0f', fillOpacity: 0.8 };
+                    }
+                    return DEFAULT_WARD_STYLE;
                 };
 
-                const priorityA = getPriority(a);
-                const priorityB = getPriority(b);
-
-                if (priorityA !== priorityB) {
-                    return priorityA - priorityB;
-                }
-
-                // If priorities are the same, apply secondary sort
-                if (priorityA === 2) { // Both are wards matched by old name (new priority 2)
-                    const oldNameA = normalizeString(a.matchedOldWardDirect);
-                    const oldNameB = normalizeString(b.matchedOldWardDirect);
-                    if (oldNameA !== oldNameB) return oldNameA.localeCompare(oldNameB);
-                    // If old names are the same (e.g. query matches old name for multiple new wards),
-                    // then sort by new display name
-                }
-                // Default secondary sort by display name for all other cases or if old names were identical
-                return normalizeString(a.displayName).localeCompare(normalizeString(b.displayName));
-            });
-
-            // Render results
-            if (searchHighlightLayer) { 
-                map.removeLayer(searchHighlightLayer);
-                searchHighlightLayer = null;
-            }
-
-            if (displayedSearchResults.length === 0) {
-                resultsPanel.innerHTML = `<p class="p-4 text-center text-gray-500">Không tìm thấy kết quả.</p>`;
-            } else {
-                resultsPanel.innerHTML = `<ul class="space-y-1 p-2">${displayedSearchResults.map((item, index) => {
-                    let displayHtml = '';
-                    let typeText = '';
-
-                    if (item.type === 'ward') {
-                        typeText = 'Phường/Xã sau sáp nhập';
-                        displayHtml = `<span class="font-semibold">${item.displayName}</span>`; // Ward Name
-
-                        // Display the type label first
-                        displayHtml += `<span class="text-xs text-indigo-500 block font-medium">${typeText}</span>`;
-
-                        if (item.matchedOldWardDirect) {
-                            const props = item.feature.properties;
-                            const oldWardsAll = (props['Sáp nhập toàn bộ từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
-                            const oldWardsPartial = (props['Sáp nhập một phần từ'] || '').split(',').map(w => w.trim()).filter(Boolean);
-                            const allOldWardsList = [...oldWardsAll, ...oldWardsPartial];
-                            
-                            const countOfOtherOldWards = allOldWardsList.filter(ow => ow !== item.matchedOldWardDirect).length;
-
-                            let sápNhapText = `Sáp nhập từ ${item.matchedOldWardDirect}`;
-                            if (countOfOtherOldWards > 0) {
-                                sápNhapText += ` và ${countOfOtherOldWards} phường/xã khác`;
-                            }
-                            displayHtml += `<span class="text-xs text-gray-500 block">${sápNhapText}</span>`;
-                        }
-                    } else if (item.type === 'district') {
-                        typeText = 'Quận/Huyện';
-                        displayHtml = `<span class="font-semibold">${item.displayName}</span><span class="text-xs text-teal-600 block font-medium">${typeText}</span>`;
-                    } else if (item.type === 'province') {
-                        typeText = 'Tỉnh/Thành phố';
-                        displayHtml = `<span class="font-semibold">${item.displayName}</span><span class="text-xs text-purple-600 block font-medium">${typeText}</span>`;
+                if (wardsLayer) wardsLayer.setStyle(styleForFeature);
+                if (activeBtn?.dataset.key) {
+                    const categoryKey = activeBtn.dataset.key;
+                    const info = choroplethInfo[categoryKey];
+                    if (info) updateLegend(categoryKey, info.min, info.max); else updateLegend(null);
+                } else { updateLegend(null); }
+            };
+            
+            // --- EVENT LISTENERS ---
+            const setupEventListeners = () => {
+                searchInput.addEventListener('focus', handleNameSearch);
+                searchInput.addEventListener('keyup', (event) => {
+                    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) return;
+                    clearTimeout(searchDebounceTimer);
+                    searchDebounceTimer = setTimeout(handleNameSearch, 250);
+                });
+                searchInput.addEventListener('keydown', (event) => {
+                    if (searchResultsPanel.style.display !== 'block' || displayedSearchResults.length === 0) return;
+                    let newIndex;
+                    switch (event.key) {
+                        case 'ArrowDown': event.preventDefault(); newIndex = (currentFocusedResultIndex + 1) % displayedSearchResults.length; updateFocusedSearchResult(newIndex); break;
+                        case 'ArrowUp': event.preventDefault(); newIndex = (currentFocusedResultIndex - 1 + displayedSearchResults.length) % displayedSearchResults.length; updateFocusedSearchResult(newIndex); break;
+                        case 'Enter': event.preventDefault(); if (currentFocusedResultIndex !== -1) handleSearchResultClick(currentFocusedResultIndex); break;
+                        case 'Escape': searchResultsPanel.style.display = 'none'; updateFocusedSearchResult(-1); break;
                     }
-                    return `<li><button id="search-result-item-${index}" onclick='handleSearchResultClick(${index})' class="w-full text-left p-3 hover:bg-indigo-50 rounded-lg text-gray-700 focus:outline-none">${displayHtml}</button></li>`;
-                }).join('')}</ul>`;
-            }
-            resultsPanel.style.display = 'block';
-        }
-
-        function handleSearchResultClick(index) {
-            if (index < 0 || index >= displayedSearchResults.length) return;
-
-            const item = displayedSearchResults[index];
-            if (item && item.feature) {
-                showResultOnMap(item.feature, item.type);
-                document.getElementById('search-results').style.display = 'none';
-                document.getElementById('wardSearchInput').value = item.displayName;
-            }
-        }
-
-        function showResultOnMap(feature, featureType = 'ward') { // Added featureType
-            if (searchHighlightLayer) {
-                map.removeLayer(searchHighlightLayer);
-                searchHighlightLayer = null;
-            }
-            if (!feature) {
-                return;
-            }
-
-            let style, tooltipText;
-            const props = feature.properties;
-
-            if (featureType === 'province') {
-                style = { color: '#800080', weight: 3, opacity: 1, fillOpacity: 0.25, fillColor: '#800080' }; // Purple for province
-                tooltipText = `Tỉnh/TP: ${props.name || 'N/A'}`; // Use 'name' from GeoJSON
-            } else if (featureType === 'district') {
-                style = { color: '#008080', weight: 3, opacity: 1, fillOpacity: 0.3, fillColor: '#008080' }; // Teal for district
-                tooltipText = `Quận/Huyện: ${props.name || 'N/A'}`; // Use 'name' from GeoJSON
-            } else { // Default to ward
-                style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 };
-                const wardName = props['Tên'] || 'N/A';
-                const namePrefix = /xã/i.test(wardName) ? 'Xã' : 'Phường';
-                tooltipText = `${namePrefix} ${wardName}`;
-            }
-
-            searchHighlightLayer = L.geoJSON(feature, { 
-                style: style,
-                interactive: false // Make sure this layer doesn't interfere with ward popups
-            });
-            searchHighlightLayer.feature = feature; // Store feature for potential checks
-
-            searchHighlightLayer.bindTooltip(tooltipText, {
-                permanent: true,
-                direction: 'center',
-                className: 'ward-label', // Can reuse or create new class
-                offset: [0, 0] 
-            }).addTo(map);
-
-            const yPadding = (document.getElementById('bottom-bar')?.clientHeight || 100) + 20;
-            const xPadding = 20;
-            map.flyToBounds(searchHighlightLayer.getBounds(), {
-                paddingTopLeft: [xPadding, 80],
-                paddingBottomRight: [xPadding, yPadding]
-            });
-        }
-
-        function initializeInsetMap() {
-            insetMapContainerElement = document.getElementById('inset-map-container');
-            if (!conDaoFeatureForInset || !insetMapContainerElement) {
-                if (insetMapContainerElement) insetMapContainerElement.style.display = 'none';
-                return;
-            }
-
-            insetMap = L.map('inset-map', {
-                attributionControl: false, zoomControl: false, dragging: false,
-                touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false,
-                boxZoom: false, keyboard: false, tap: false
-            });
-
-            // Optional: Add a very simple base layer for context, or none for just the shape
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                 maxZoom: 20 // Adjust maxZoom as needed for the inset scale
-            }).addTo(insetMap);
-
-            conDaoLayerOnInset = L.geoJSON(conDaoFeatureForInset, { style: CON_DAO_INSET_STYLE }).addTo(insetMap);
-            insetMap.fitBounds(conDaoLayerOnInset.getBounds(), { padding: [5, 5] }); // Minimal padding
-
-            updateInsetMapVisibility(); // Initial check
-        }
-
-        function updateInsetMapVisibility() {
-            if (!map || !conDaoFeatureForInset || !insetMapContainerElement || !insetMap) {
-                if (insetMapContainerElement) insetMapContainerElement.style.display = 'none';
-                return;
-            }
-
-            const conDaoMainMapBounds = L.geoJSON(conDaoFeatureForInset).getBounds();
-
-            if (map.getBounds().intersects(conDaoMainMapBounds)) {
-                insetMapContainerElement.style.display = 'none';
-            } else {
-                insetMapContainerElement.style.display = 'block';
-                // Ensure inset map is properly sized if it was hidden
-                insetMap.invalidateSize();
-                // Re-fit bounds
-                if (conDaoLayerOnInset) {
-                     insetMap.fitBounds(conDaoLayerOnInset.getBounds(), { padding: [5, 5] });
-                }
-            }
-        }
-
-        function updateTileLayer() {
-            if (!map) return;
-
-            const zoom = map.getZoom();
-            let newTileUrl;
-
-            if (zoom <= 11) { // Zoom 9 and 10 (and anything less if minZoom allows)
-                newTileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png';
-            } else { // Zoom > 10
-                newTileUrl = 'https://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
-            }
-
-            if (currentTileLayer) {
-                map.removeLayer(currentTileLayer);
-            }
-
-            currentTileLayer = L.tileLayer(newTileUrl, {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20 // Carto maxZoom is typically 20
-            }).addTo(map);
-        }
-
-        function updateFocusedSearchResult(newIndex) {
-            const resultsPanel = document.getElementById('search-results');
-            if (!resultsPanel || resultsPanel.style.display === 'none' || displayedSearchResults.length === 0) {
-                return;
-            }
-
-            // Remove focus from the previously focused item
-            if (currentFocusedResultIndex !== -1) {
-                const prevFocusedItem = document.getElementById(`search-result-item-${currentFocusedResultIndex}`);
-                if (prevFocusedItem) {
-                    prevFocusedItem.classList.remove('focused-search-result');
-                }
-            }
-
-            currentFocusedResultIndex = newIndex;
-
-            // Add focus to the new item
-            if (currentFocusedResultIndex !== -1) {
-                const newFocusedItem = document.getElementById(`search-result-item-${currentFocusedResultIndex}`);
-                if (newFocusedItem) {
-                    newFocusedItem.classList.add('focused-search-result');
-                    newFocusedItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                }
-            }
-        }
-
-
-        document.getElementById('wardSearchInput').addEventListener('focus', handleNameSearch);
-        document.getElementById('wardSearchInput').addEventListener('keyup', (event) => {
-            // Don't re-trigger search if an arrow key (used for navigation) or Enter/Escape was just pressed.
-            // These are handled by the keydown listener.
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === 'Escape') {
-                return;
-            }
-            handleNameSearch(); // Otherwise, proceed with search logic
-        });
-        document.getElementById('wardSearchInput').addEventListener('keydown', (event) => {
-            const resultsPanel = document.getElementById('search-results');
-            if (resultsPanel.style.display !== 'block' || displayedSearchResults.length === 0) {
-                return;
-            }
-
-            if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                let newIndex = currentFocusedResultIndex + 1;
-                if (newIndex >= displayedSearchResults.length) newIndex = 0; // Loop to top
-                updateFocusedSearchResult(newIndex);
-            } else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                let newIndex = currentFocusedResultIndex - 1;
-                if (newIndex < 0) newIndex = displayedSearchResults.length - 1; // Loop to bottom
-                updateFocusedSearchResult(newIndex);
-            } else if (event.key === 'Enter') {
-                event.preventDefault();
-                if (currentFocusedResultIndex !== -1) {
-                    handleSearchResultClick(currentFocusedResultIndex);
-                }
-            } else if (event.key === 'Escape') {
-                resultsPanel.style.display = 'none';
-                updateFocusedSearchResult(-1); // Clear focus
-            }
-        });
-
-        document.getElementById('heatmap-controls').addEventListener('click', e => {
-            if (e.target.tagName === 'BUTTON') {
-                document.querySelectorAll('#heatmap-controls button').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
+                });
+                heatmapControls.addEventListener('click', e => {
+                    if (e.target.tagName === 'BUTTON') {
+                        heatmapControls.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        renderMapVisualization();
+                    }
+                });
+                document.addEventListener('click', (event) => {
+                    if (!searchContainer.contains(event.target) && !event.target.closest('.leaflet-popup-pane')) {
+                        searchResultsPanel.style.display = 'none';
+                        updateFocusedSearchResult(-1);
+                        if (!mapDomElement.contains(event.target)) { searchInput.value = ''; showResultOnMap(null); }
+                    }
+                });
+                map.on('click', () => {
+                    showResultOnMap(null);
+                    searchResultsPanel.style.display = 'none';
+                    searchInput.value = '';
+                    searchInput.blur();
+                    updateFocusedSearchResult(-1);
+                });
+                map.on('zoomend', updateTileLayer);
+            };
+            
+            // --- MAIN INITIALIZATION ---
+            const initializeApp = async () => {
+                setLoading(true);
+                await loadData();
+                if (!wardData?.features?.length) { setLoading(false); alert("Không có dữ liệu địa lý để hiển thị bản đồ."); return; }
+                // calculate custom padded bounds: 0.2 on sides/bottom, 0.5 on top
+                const rawBounds = L.geoJSON(wardData).getBounds();
+                const latDiff = rawBounds.getNorth() - rawBounds.getSouth();
+                const lngDiff = rawBounds.getEast() - rawBounds.getWest();
+                const dataBounds = L.latLngBounds(
+                    [
+                        rawBounds.getSouth() - latDiff * 0.2,  // bottom with 0.2
+                        rawBounds.getWest() - lngDiff * 0.2     // left with 0.2
+                    ],
+                    [
+                        rawBounds.getNorth() + latDiff * 0.5,  // top with 0.5
+                        rawBounds.getEast() + lngDiff * 0.2     // right with 0.2
+                    ]
+                );
+                map = L.map('map', { center: [10.78, 106.78], zoom: 9, attributionControl: false, zoomControl: false, maxBounds: dataBounds, maxBoundsViscosity: 1.0, minZoom: 9, maxZoom: 18 });
+                L.control.zoom({ position: 'topright' }).addTo(map);
+                updateTileLayer();
+                createWardsLayer();
+                setupEventListeners();
+                densityButton.classList.add('active');
                 renderMapVisualization();
-            }
-        });
-
-        document.addEventListener('click', function(event) {
-            const searchContainer = document.getElementById('search-container');
-            const resultsPanel = document.getElementById('search-results');
-            const wardSearchInput = document.getElementById('wardSearchInput');
-            const mapContainer = document.getElementById('map');
-
-            const isClickOnPopup = event.target.closest('.leaflet-popup-pane');
-
-            // If the click is outside the search container AND not on a map popup
-            if (!searchContainer.contains(event.target) && !isClickOnPopup) {
-                resultsPanel.style.display = 'none';
-                updateFocusedSearchResult(-1); // Clear visual focus from search list
-
-                // If the click was also not on the map itself, then clear search input and highlight.
-                // Clicks on the map are handled by map.on('click').
-                if (!mapContainer.contains(event.target)) {
-                    wardSearchInput.value = ''; // Clear search input text
-                    showResultOnMap(null);      // Clear map highlight
-                }
-            }
-        });
-
-        async function initializeApp() {
-            setLoading(true);
-            
-            // Load data first to calculate bounds
-            await loadData();
-            if (!wardData || !wardData.features || wardData.features.length === 0) {
                 setLoading(false);
-                alert("Không có dữ liệu địa lý để hiển thị bản đồ.");
-                return;
-            }
+            };
 
-            // Calculate the center of all ward data
-            const tempLayer = L.geoJSON(wardData);
-            const dataBounds = tempLayer.getBounds();
-
-            // Add padding to the dataBounds. 0.05 means 5% padding on all sides.
-            const PADDING_RATIO = 0.2;
-            const paddedBounds = dataBounds.pad(PADDING_RATIO);
-            
-            map = L.map('map', {
-                center: [10.78, 106.78],
-                zoom: 9,
-                attributionControl: false,
-                zoomControl: false
-            });
-
-            map.setMaxBounds(paddedBounds); // Lock map to the PADDED bounds of the data
-            map.options.maxBoundsViscosity = 1.0; // Make bounds feel like a hard stop
-            map.options.minZoom = 9;      // Set a minimum zoom level (e.g., initial zoom)
-            map.options.maxZoom = 18;     // Set a maximum zoom level
-            
-            L.control.zoom({ position: 'topright' }).addTo(map);
-
-            updateTileLayer(); // Set initial tile layer
-
-            map.on('click', () => {
-                showResultOnMap(null); 
-                document.getElementById('search-results').style.display = 'none';
-                document.getElementById('wardSearchInput').value = '';
-                document.getElementById('wardSearchInput').blur(); // Remove focus from input
-                updateFocusedSearchResult(-1); // Clear visual focus from search list
-            });
-
-            createWardsLayer();
-            initializeInsetMap(); // Initialize the inset map after main map and data
-
-            if (map && conDaoFeatureForInset) { // Add listeners if inset is possible
-                map.on('moveend', updateInsetMapVisibility);
-                map.on('zoomend', updateTileLayer); // Update tile layer on zoom change
-                map.on('zoomend', updateInsetMapVisibility);
-            }
-            document.getElementById('btn-density').classList.add('active');
-            renderMapVisualization();
-            setLoading(false);
-        }
-
-        initializeApp();
+            initializeApp();
+        });
     </script>
 </body>
 </html>
