@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bản đồ Phân tích Dữ liệu Phường/Xã (Optimized)</title>
+    <title>Bản đồ Phường/Xã TP HCM mới</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -686,11 +686,11 @@
                 let mergedWardsText = 'Không';
                 if (mergedAllText || mergedPartialText) {
                     mergedWardsText = [
-                        mergedAllText ? `toàn bộ ${mergedAllText}` : '',
-                        mergedPartialText ? `một phần ${mergedPartialText}` : ''
+                        mergedAllText ? `Toàn bộ ${mergedAllText}` : '',
+                        mergedPartialText ? `Một phần ${mergedPartialText}` : ''
                     ].filter(Boolean).join('; và ');
                 }
-                const headquarters = props?.['Full Address 1'] ?? 'Chưa có thông tin';
+                const headquarters = props?.['Địa chỉ trụ sở hành chính 1'] ?? 'Chưa có thông tin';
                 const lat = props?.['Latitude 1'];
                 const lon = props?.['Longitude 1'];
                 const navUrl = (lat && lon) ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
