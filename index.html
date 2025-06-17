@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bản đồ phường xã mới TP HCM</title>
+    <title>Bản đồ Phân tích Dữ liệu Phường/Xã (Optimized)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -370,9 +370,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- CORRECTED & OPTIMIZED CONFIGURATION ---
-            // These URLs point to your repository. This code assumes you have converted
-            // your .json files to the .topojson format for performance.
             const WARDS_TOPOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Wards.json';
             const PROVINCES_TOPOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Provinces.json';
             const DISTRICTS_TOPOJSON_URL = 'https://raw.githubusercontent.com/lqtue/phuongnao/main/Data/Districts.json';
@@ -416,17 +413,21 @@
             };
 
             const normalizeString = (() => {
-                const replacements = { 'thanh pho': 'tp', 'tp.': 'tp', 'p.': 'phuong', 'q.': 'quan', 'h.': 'huyen' };
-                const regex = new RegExp(`\\b(${Object.keys(replacements).join('|')})\\b`, 'g');
-
                 return (str) => {
                     if (!str) return '';
                     let n = str.toLowerCase();
                     n = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
-                    n = n.replace(regex, match => replacements[match]);
-                    if (n.startsWith("tp ") && (n.includes("hcm") || n.includes("ho chi minh"))) {
-                        n = n.replace(/\bhcm\b/g, "ho chi minh");
-                    }
+
+                    // Consistently map common prefixes/abbreviations to their full normalized form
+                    n = n.replace(/\bthành phố\b/g, "thanh pho");
+                    n = n.replace(/\btp\b/g, "thanh pho"); // Handle "tp" as a word
+                    n = n.replace(/tp\./g, "thanh pho"); // Handle "tp."
+                    n = n.replace(/\bphường\b/g, "phuong");
+                    n = n.replace(/\bp\./g, "phuong");
+                    n = n.replace(/\bquận\b/g, "quan");
+                    n = n.replace(/\bq\./g, "quan");
+                    n = n.replace(/\bhuyện\b/g, "huyen");
+                    n = n.replace(/\bh\./g, "huyen");
                     return n.replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
                 };
             })();
@@ -436,7 +437,7 @@
                 const qLen = query.length;
                 const tLen = target.length;
                 return target === query ||
-                       (target.startsWith(query) && (tLen === qLen || target[qLen] === ' ')) ||
+                       target.startsWith(query) || // More lenient prefix matching
                        (target.endsWith(query) && (tLen > qLen && target[tLen - qLen - 1] === ' ')) ||
                        ` ${target} `.includes(` ${query} `);
             };
@@ -780,7 +781,13 @@
                             typeText = 'Phường/Xã mới'; typeColor = 'text-indigo-500';
                             displayHtml = `<span class="font-semibold">${item.displayName}</span>`;
                             displayHtml += `<span class="text-xs ${typeColor} block font-medium">${typeText}</span>`;
-                            if (item.matchedOldWardDirect) { displayHtml += `<span class="text-xs text-gray-500 block">Sáp nhập từ ${item.matchedOldWardDirect}</span>`; }
+                            if (item.matchedOldWardDirect) {
+                                if (item.matchedOldWardDirect.includes('(giữ nguyên)')) {
+                                    displayHtml += `<span class="text-xs text-gray-500 block">Giữ nguyên tên</span>`;
+                                } else {
+                                    displayHtml += `<span class="text-xs text-gray-500 block">Sáp nhập từ ${item.matchedOldWardDirect}</span>`;
+                                }
+                            }
                         } else {
                             typeText = item.type === 'district' ? 'Quận/Huyện' : 'Tỉnh/Thành phố';
                             typeColor = item.type === 'district' ? 'text-teal-600' : 'text-purple-600';
