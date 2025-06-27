@@ -437,9 +437,9 @@
                 const qLen = query.length;
                 const tLen = target.length;
                 return target === query ||
-                       target.startsWith(query) || // More lenient prefix matching
-                       (target.endsWith(query) && (tLen > qLen && target[tLen - qLen - 1] === ' ')) ||
-                       ` ${target} `.includes(` ${query} `);
+                        target.startsWith(query) || // More lenient prefix matching
+                        (target.endsWith(query) && (tLen > qLen && target[tLen - qLen - 1] === ' ')) ||
+                        ` ${target} `.includes(` ${query} `);
             };
             
             const formatWardList = (wardString) => {
@@ -544,7 +544,12 @@
                     const rowObject = {};
                     headers.forEach((header, i) => {
                         const value = values[i] || '';
-                        rowObject[header] = isNaN(parseFloat(value)) ? value.trim() : parseFloat(value);
+                        // Keep 'Loại' as a string, parse others as numbers if possible
+                        if (header === 'Loại') {
+                             rowObject[header] = value.trim();
+                        } else {
+                             rowObject[header] = isNaN(parseFloat(value)) ? value.trim() : parseFloat(value);
+                        }
                     });
                     return rowObject;
                 }).filter(obj => obj.STT);
@@ -646,8 +651,11 @@
             };
             
             const onEachFeatureForWardLayer = (feature, layer) => {
-                const { 'Tên': name = 'N/A' } = feature.properties;
-                layer.bindTooltip(`${name}`);
+                const { 'Tên': name = 'N/A', 'Loại': type } = feature.properties;
+                // Use the 'Loại' property if it exists, otherwise fall back to checking the name.
+                const finalType = type || (/xã/i.test(name) ? 'Xã' : 'Phường');
+                layer.bindTooltip(`${finalType} ${name}`);
+
                 layer.on({
                     mouseover: onWardMouseover,
                     mouseout: onWardMouseout,
@@ -677,7 +685,8 @@
 
             const createPopupContent = (props) => {
                 const name = props?.['Tên'] ?? 'N/A';
-                const type = prop?.['Loại'] ?? 'N/A';
+                // Use the 'Loại' property. Fallback to old logic if 'Loại' is missing.
+                const type = props?.['Loại'] || (/xã/i.test(name) ? 'Xã' : 'Phường');
                 const population = props?.['Dân số (người)']?.toLocaleString('vi-VN') ?? 'N/A';
                 const area = props?.['Diện tích (km2)'] ? `${props['Diện tích (km2)'].toFixed(2)} km²` : 'N/A';
                 const density = props?.['Mật độ (người/km2)'] ? `${Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN')} ng/km²` : 'N/A';
@@ -693,7 +702,7 @@
                 const headquarters = props?.['Địa chỉ trụ sở hành chính 1'] ?? 'Chưa có thông tin';
                 const lat = props?.['Latitude 1'];
                 const lon = props?.['Longitude 1'];
-                const navUrl = (lat && lon) ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}` : null;
+                const navUrl = (lat && lon) ? `https://maps.google.com/maps?q=${lat},${lon}` : null;
                 return `
                     <div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>
                     <div class="info-popup-body">
@@ -814,16 +823,33 @@
                 if (searchHighlightLayer) map.removeLayer(searchHighlightLayer);
                 searchHighlightLayer = null;
                 if (!feature) return;
+
                 let style, tooltipText;
                 const props = feature.properties;
                 switch (featureType) {
-                    case 'province': style = { color: '#800080', weight: 3, opacity: 1, fillOpacity: 0.25, fillColor: '#800080' }; tooltipText = `Tỉnh/TP: ${props.name || 'N/A'}`; break;
-                    case 'district': style = { color: '#008080', weight: 3, opacity: 1, fillOpacity: 0.3, fillColor: '#008080' }; tooltipText = `Quận/Huyện: ${props.name || 'N/A'}`; break;
-                    default: style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 }; const wardName = props['Tên'] || 'N/A'; tooltipText = `${wardName}`;
+                    case 'province':
+                        style = { color: '#800080', weight: 3, opacity: 1, fillOpacity: 0.25, fillColor: '#800080' };
+                        tooltipText = `Tỉnh/TP: ${props.name || 'N/A'}`;
+                        break;
+                    case 'district':
+                        style = { color: '#008080', weight: 3, opacity: 1, fillOpacity: 0.3, fillColor: '#008080' };
+                        tooltipText = `Quận/Huyện: ${props.name || 'N/A'}`;
+                        break;
+                    default:
+                        style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 };
+                        const wardName = props['Tên'] || 'N/A';
+                        // Use 'Loại' property. Fallback to old logic if 'Loại' is missing.
+                        const type = props['Loại'] || (/xã/i.test(wardName) ? 'Xã' : 'Phường');
+                        tooltipText = `${type} ${wardName}`;
                 }
+                
                 searchHighlightLayer = L.geoJSON(feature, { style, interactive: false }).addTo(map);
-                // const yPadding = (document.getElementById('bottom-bar')?.clientHeight || 100) + 20;
-                // map.flyToBounds(searchHighlightLayer.getBounds(), { paddingTopLeft: [20, 80], paddingBottomRight: [20, yPadding] });
+
+                // Add a permanent tooltip to the highlighted search result
+                if (tooltipText) {
+                    searchHighlightLayer.bindTooltip(tooltipText, { permanent: true, direction: 'center', className: 'ward-label' }).openTooltip();
+                }
+                
                 if (shouldZoom) {
                     const bottomBarElement = document.getElementById('bottom-bar');
                     const horizontalFlyToPadding = 20;
@@ -950,11 +976,11 @@
                 const dataBounds = L.latLngBounds(
                     [
                         rawBounds.getSouth() - latDiff * 0.2,  // bottom with 0.2
-                        rawBounds.getWest() - lngDiff * 0.2     // left with 0.2
+                        rawBounds.getWest() - lngDiff * 0.2    // left with 0.2
                     ],
                     [
                         rawBounds.getNorth() + latDiff * 0.5,  // top with 0.5
-                        rawBounds.getEast() + lngDiff * 0.2     // right with 0.2
+                        rawBounds.getEast() + lngDiff * 0.2    // right with 0.2
                     ]
                 );
                 map = L.map('map', { center: [10.78, 106.78], zoom: 9, attributionControl: false, zoomControl: false, maxBounds: dataBounds, maxBoundsViscosity: 1.0, minZoom: 9, maxZoom: 18 });
