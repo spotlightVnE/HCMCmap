@@ -647,7 +647,7 @@
             
             const onEachFeatureForWardLayer = (feature, layer) => {
                 const { 'Tên': name = 'N/A' } = feature.properties;
-                layer.bindTooltip(`${/xã/i.test(name) ? 'Xã' : 'Phường'} ${name}`);
+                layer.bindTooltip(`${name}`);
                 layer.on({
                     mouseover: onWardMouseover,
                     mouseout: onWardMouseout,
