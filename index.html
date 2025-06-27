@@ -677,7 +677,7 @@
 
             const createPopupContent = (props) => {
                 const name = props?.['Tên'] ?? 'N/A';
-                const type = /xã/i.test(name) ? 'Xã' : 'Phường';
+                const type = prop?.['Loại'] ?? 'N/A';
                 const population = props?.['Dân số (người)']?.toLocaleString('vi-VN') ?? 'N/A';
                 const area = props?.['Diện tích (km2)'] ? `${props['Diện tích (km2)'].toFixed(2)} km²` : 'N/A';
                 const density = props?.['Mật độ (người/km2)'] ? `${Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN')} ng/km²` : 'N/A';
