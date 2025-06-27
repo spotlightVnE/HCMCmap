@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bản đồ Phường/Xã TP HCM mới</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
@@ -511,6 +512,7 @@
             let currentFocusedResultIndex = -1;
             let searchDebounceTimer;
             let currentSelectedWardId = null;   // STT of the ward currently highlighted
+            let activeTooltipLayer = null;
 
             // --- UTILITY FUNCTIONS ---
             const setLoading = (isLoading) => {
@@ -752,6 +754,11 @@
 
             // --- EVENT HANDLERS & POPUPS ---
             const onWardMouseover = (e) => {
+                if (activeTooltipLayer && activeTooltipLayer !== e.target) {
+                    activeTooltipLayer.closeTooltip();
+                }
+                e.target.openTooltip();
+                activeTooltipLayer = e.target;
                 const activeBtn = heatmapControls.querySelector('button.active');
                 if (!activeBtn?.dataset.key) return;
                 const key = activeBtn.dataset.key;
@@ -768,17 +775,22 @@
                 hoverValue.style.display = 'block';
             };
 
-            const onWardMouseout = () => {
+            const onWardMouseout = (e) => {
                 const indicator = document.getElementById('legend-indicator');
                 const hoverValue = document.getElementById('legend-hover-value');
                 if (indicator) indicator.style.display = 'none';
                 if (hoverValue) hoverValue.style.display = 'none';
+                if (e?.target?.closeTooltip) e.target.closeTooltip();
+                if (activeTooltipLayer === e.target) {
+                    activeTooltipLayer = null;
+                }
             };
             
             const onEachFeatureForWardLayer = (feature, layer) => {
                 const { 'Tên': name = 'N/A', 'Loại': type } = feature.properties;
                 // Use the 'Loại' property if it exists, otherwise fall back to checking the name.
                 const finalType = type || (/xã/i.test(name) ? 'Xã' : 'Phường');
+                // Only bind a non-permanent tooltip (for mouseover/out)
                 layer.bindTooltip(`${finalType} ${name}`);
 
                 layer.on({
@@ -996,11 +1008,11 @@
                 
                 searchHighlightLayer = L.geoJSON(feature, { style, interactive: false }).addTo(map);
 
-                // Add a permanent tooltip to the highlighted search result
+                // Do NOT add a permanent tooltip to the highlighted search result
                 // if (tooltipText) {
                 //    searchHighlightLayer.bindTooltip(tooltipText, { permanent: true, direction: 'center', className: 'ward-label' }).openTooltip();
                 // }
-                
+
                 if (shouldZoom) {
                     const bottomBarElement = document.getElementById('bottom-bar');
                     const horizontalFlyToPadding = 20;
