@@ -706,7 +706,7 @@
                         mergedPartialText ? `Một phần ${mergedPartialText}` : ''
                     ].filter(Boolean).join('; và ');
                 }
-                const headquarters = props?.['Địa chỉ trụ sở hành chính 1'] ?? 'Chưa có thông tin';
+                const headquarters = props?.['Full Address 1'] ?? 'Chưa có thông tin';
                 const lat = props?.['Latitude 1'];
                 const lon = props?.['Longitude 1'];
                 const navUrl = (lat && lon) ? `https://maps.google.com/maps?q=${lat},${lon}` : null;
