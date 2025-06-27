@@ -819,7 +819,7 @@
                 switch (featureType) {
                     case 'province': style = { color: '#800080', weight: 3, opacity: 1, fillOpacity: 0.25, fillColor: '#800080' }; tooltipText = `Tỉnh/TP: ${props.name || 'N/A'}`; break;
                     case 'district': style = { color: '#008080', weight: 3, opacity: 1, fillOpacity: 0.3, fillColor: '#008080' }; tooltipText = `Quận/Huyện: ${props.name || 'N/A'}`; break;
-                    default: style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 }; const wardName = props['Tên'] || 'N/A'; tooltipText = `${/xã/i.test(wardName) ? 'Xã' : 'Phường'} ${wardName}`;
+                    default: style = { color: '#fde047', weight: 4, opacity: 1, fillColor: '#facc15', fillOpacity: 0.5 }; const wardName = props['Tên'] || 'N/A'; tooltipText = `${wardName}`;
                 }
                 searchHighlightLayer = L.geoJSON(feature, { style, interactive: false }).addTo(map);
                 // const yPadding = (document.getElementById('bottom-bar')?.clientHeight || 100) + 20;
