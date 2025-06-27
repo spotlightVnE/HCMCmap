@@ -35,16 +35,55 @@
             right: 0;
             z-index: 1001;
             display: flex;
-            justify-content: center;
-            padding: 1rem;
+            gap: 0.5rem;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
             pointer-events: none;
+        }
+
+        #logo-container {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .vnexpress-logo {
+            height: 22px;
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            #top-bar {
+                padding: 0.5rem;
+            }
+            .vnexpress-logo {
+                height: 18px;
+            }
         }
 
         #search-container {
             width: 100%;
-            max-width: 450px;
+            max-width: 800px;
             position: relative;
             pointer-events: auto;
+        }
+        @media (max-width: 640px) {
+            #search-container {
+                max-width: 85%;
+            }
+
+            #search-box {
+                padding: 0.4rem 0.4rem;
+                font-size: 0.7rem;
+            }
+
+            #wardSearchInput {
+                font-size: 0.7rem;
+            }
+        #logo-container {
+            margin-right: 0.5rem;
+        }
         }
 
         #search-box {
@@ -62,7 +101,7 @@
         #wardSearchInput {
             width: 100%;
             background: transparent;
-            font-size: 1rem;
+            font-size: 0.75rem;
             font-weight: 500;
             color: #1f2937;
             outline: none;
@@ -196,9 +235,9 @@
         @media (max-width: 768px) {
             #bottom-bar {
                 flex-direction: column;
-                flex-direction: column-reverse; /* Move legend to bottom on mobile for better UX */
-                gap: 1rem;
-                padding: 0.75rem;
+                flex-direction: column-reverse;
+                gap: 0.5rem;
+                padding: 0.5rem;
             }
 
             #legend-container {
@@ -212,8 +251,25 @@
             }
 
             .info-popup .leaflet-popup-content {
-                width: 90vw !important;
+                margin: 0;
+                font-size: 13px;
+                max-width: 60vw;           /* Tối đa 60% chiều rộng màn hình lớn */
+                min-width: 200px;
+                padding-left: 1vw;         /* Tạo khoảng cách hai bên ~20% tổng */
+                padding-right: 1vw;
+                box-sizing: border-box;
             }
+            @media (max-width: 768px) {
+                .info-popup .leaflet-popup-content {
+                    max-width: 90vw;
+                    padding-left: 1vw;
+                    padding-right: 1vw;
+                }
+            }
+        }
+
+        #legend-container .labels {
+            font-size: 10px;
         }
 
         /* --- Các style khác --- */
@@ -364,16 +420,43 @@
     </style>
 </head>
 
+<!-- === Extra‑compact popup spacing === -->
+<style>
+.info-popup-header{
+    padding:0.35rem 0.6rem !important;
+}
+.info-popup-body{
+    padding:0.4rem 0.6rem !important;
+    gap:0.4rem !important;
+}
+.info-popup-footer{
+    padding:0.4rem !important;
+}
+.navigate-btn{
+    padding:0.35rem !important;
+    font-size:0.8rem !important;
+}
+.info-line{
+    gap:0.25rem !important;
+    font-size:0.8rem !important;
+}
+</style>
+</head>
+
 <body>
 
     <div id="map"></div>
     <div id="loading" class="spinner"></div>
 
     <div id="top-bar">
+        <div id="logo-container">
+            <a href="https://vnexpress.net" target="_blank" title="Về trang chủ VnExpress">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/28/VnExpress.net_Logo.svg" alt="VnExpress Logo" class="vnexpress-logo">
+            </a>
+        </div>
         <div id="search-container">
             <div id="search-box">
-                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
-                <input type="text" id="wardSearchInput" placeholder="Tìm phường xã (cũ/mới) hoặc quận huyện">
+                <input type="text" id="wardSearchInput" placeholder="Tìm ĐVHC (cũ/mới). VD: Phường 1 Quận 3, TP Bà Rịa, Bình Dương,...">
             </div>
             <div id="search-results"></div>
         </div>
@@ -427,6 +510,7 @@
             let displayedSearchResults = [];
             let currentFocusedResultIndex = -1;
             let searchDebounceTimer;
+            let currentSelectedWardId = null;   // STT of the ward currently highlighted
 
             // --- UTILITY FUNCTIONS ---
             const setLoading = (isLoading) => {
@@ -646,6 +730,26 @@
                 });
             };
 
+            // Sau prepareChoroplethData()
+            const addRankings = () => {
+                if (!wardData?.features) return;
+
+                const metrics = [
+                    { key: 'Dân số (người)',      rankKey: 'rank_population' },
+                    { key: 'Diện tích (km2)',     rankKey: 'rank_area' },
+                    { key: 'Mật độ (người/km2)',  rankKey: 'rank_density' }
+                ];
+
+                metrics.forEach(({ key, rankKey }) => {
+                    // Sắp xếp giảm dần → lớn nhất hạng 1
+                    const sorted = wardData.features
+                        .filter(f => typeof f.properties[key] === 'number' && isFinite(f.properties[key]))
+                        .sort((a, b) => b.properties[key] - a.properties[key]);
+
+                    sorted.forEach((f, idx) => { f.properties[rankKey] = idx + 1; });
+                });
+            };
+
             // --- EVENT HANDLERS & POPUPS ---
             const onWardMouseover = (e) => {
                 const activeBtn = heatmapControls.querySelector('button.active');
@@ -682,11 +786,25 @@
                     mouseout: onWardMouseout,
                     click: (e) => {
                         L.DomEvent.stopPropagation(e);
-                        searchInput.value = '';
-                        searchResultsPanel.style.display = 'none';
-                        updateFocusedSearchResult(-1);
+
+                        // If tapping the same ward again, deselect & quit
+                        if (currentSelectedWardId === feature.properties.STT) {
+                            map.closePopup();
+                            showResultOnMap(null);
+                            currentSelectedWardId = null;
+                            searchInput.value = '';
+                            searchResultsPanel.style.display = 'none';
+                            updateFocusedSearchResult(-1);
+                            return;
+                        }
+
+                        // Otherwise, reset any previous selection
+                        map.closePopup();
+                        showResultOnMap(null);
+                        currentSelectedWardId = feature.properties.STT;
+
                         showResultOnMap(feature, 'ward', false); // Highlight on main map
-            
+
                         const topBarElement = document.getElementById('top-bar');
                         const bottomBarElement = document.getElementById('bottom-bar');
                         const topBarHeight = topBarElement ? topBarElement.offsetHeight : 75;
@@ -695,7 +813,7 @@
                         const verticalPopupMarginFromBar = 15;
                         const popupActualPaddingTop = topBarHeight + verticalPopupMarginFromBar;
                         const popupActualPaddingBottom = bottomBarHeight + verticalPopupMarginFromBar;
-            
+
                         L.popup({ className: 'info-popup', autoPanPaddingTopLeft: L.point(horizontalPopupMarginFromEdge, popupActualPaddingTop), autoPanPaddingBottomRight: L.point(horizontalPopupMarginFromEdge, popupActualPaddingBottom)})
                             .setLatLng(e.latlng)
                             .setContent(createPopupContent(feature.properties))
@@ -708,9 +826,18 @@
                 const name = props?.['Tên'] ?? 'N/A';
                 // Use the 'Loại' property. Fallback to old logic if 'Loại' is missing.
                 const type = props?.['Loại'] || (/xã/i.test(name) ? 'Xã' : 'Phường');
-                const population = props?.['Dân số (người)']?.toLocaleString('vi-VN') ?? 'N/A';
-                const area = props?.['Diện tích (km2)'] ? `${props['Diện tích (km2)'].toFixed(2)} km²` : 'N/A';
-                const density = props?.['Mật độ (người/km2)'] ? `${Math.round(props['Mật độ (người/km2)']).toLocaleString('vi-VN')} ng/km²` : 'N/A';
+                const populationValue = props?.['Dân số (người)'];
+                const areaValue = props?.['Diện tích (km2)'];
+                const densityValue = props?.['Mật độ (người/km2)'];
+
+                const populationRank = props?.['rank_population'];
+                const areaRank = props?.['rank_area'];
+                const densityRank = props?.['rank_density'];
+
+                const population = populationValue ? populationValue.toLocaleString('vi-VN') : 'N/A';
+                const area = areaValue ? `${areaValue.toFixed(2)} km²` : 'N/A';
+                const density = densityValue ? `${Math.round(densityValue).toLocaleString('vi-VN')} ng/km²` : 'N/A';
+
                 const mergedAllText = formatWardList(props['Sáp nhập toàn bộ từ']);
                 const mergedPartialText = formatWardList(props['Sáp nhập một phần từ']);
                 let mergedWardsText = 'Không';
@@ -721,17 +848,20 @@
                     ].filter(Boolean).join('; và ');
                 }
                 const headquarters = props?.['Full Address 1'] ?? 'Chưa có thông tin';
+                const hotlineRaw = props?.['SĐT'] ?? null;
+                const hotline = typeof hotlineRaw === 'number' ? '0' + hotlineRaw.toString() : hotlineRaw;
                 const lat = props?.['Latitude 1'];
                 const lon = props?.['Longitude 1'];
                 const navUrl = (lat && lon) ? `https://maps.google.com/maps?q=${lat},${lon}` : null;
                 return `
                     <div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>
                     <div class="info-popup-body">
-                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i><span>Dân số</span></div><div class="info-value">${population}</div></div>
-                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i><span>Diện tích</span></div><div class="info-value">${area}</div></div>
-                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i><span>Mật độ</span></div><div class="info-value">${density}</div></div>
+                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i><span>Dân số</span></div><div class="info-value">${populationRank ? `<span class="text-indigo-700 font-semibold">#${populationRank}/168</span> · ` : ''}${population}</div></div>
+                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i><span>Diện tích</span></div><div class="info-value">${areaRank ? `<span class="text-indigo-700 font-semibold">#${areaRank}/168</span> · ` : ''}${area}</div></div>
+                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i><span>Mật độ</span></div><div class="info-value">${densityRank ? `<span class="text-indigo-700 font-semibold">#${densityRank}/168</span> · ` : ''}${density}</div></div>
                         <div class="info-section"><div class="info-label"><i class="fa-solid fa-code-merge fa-fw"></i><span>Sáp nhập</span></div>${mergedWardsText}</div>
                         <div class="info-section"><div class="info-label"><i class="fa-solid fa-location-dot fa-fw"></i><span>Trụ sở</span></div>${headquarters}</div>
+                        ${hotline ? `<div class="info-section"><div class="info-label"><i class="fa-solid fa-phone fa-fw"></i><span>Đường dây nóng</span></div>${hotline}</div>` : ''}
                     </div>
                     ${navUrl ? `<div class="info-popup-footer"><a href="${navUrl}" target="_blank" class="navigate-btn"><i class="fa-solid fa-diamond-turn-right fa-fw"></i> Chỉ đường đến trụ sở</a></div>` : ''}
                 `;
@@ -976,7 +1106,14 @@
                     }
                 });
                 map.on('click', () => {
+                    // Đóng popup nếu đang mở
+                    map.closePopup();
+
+                    // Reset lớp highlight
                     showResultOnMap(null);
+                    currentSelectedWardId = null;
+
+                    // Ẩn panel tìm kiếm & clear input
                     searchResultsPanel.style.display = 'none';
                     searchInput.value = '';
                     searchInput.blur();
@@ -1005,20 +1142,21 @@
                     ]
                 );
                 map = L.map('map', { center: [10.78, 106.78], zoom: 9, attributionControl: false, zoomControl: false, maxBounds: dataBounds, maxBoundsViscosity: 1.0, minZoom: 9, maxZoom: 18 });
-                L.control.zoom({ position: 'topright' }).addTo(map);
 
-                const logoControl = L.control({position: 'topleft'});
-                logoControl.onAdd = function(map) {
-                    const container = L.DomUtil.create('div', 'leaflet-logo-control');
-                    container.innerHTML = '<a href="https://vnexpress.net" target="_blank" title="Về trang chủ VnExpress"><img src="https://upload.wikimedia.org/wikipedia/commons/2/28/VnExpress.net_Logo.svg" alt="VnExpress Logo"></a>';
-                    L.DomEvent.disableClickPropagation(container);
-                    return container;
-                };
-                logoControl.addTo(map);
+                // const logoControl = L.control({position: 'topleft'});
+                // logoControl.onAdd = function(map) {
+                //     const container = L.DomUtil.create('div', 'leaflet-logo-control');
+                //     container.innerHTML = '<a href="https://vnexpress.net" target="_blank" title="Về trang chủ VnExpress"><img src="https://upload.wikimedia.org/wikipedia/commons/2/28/VnExpress.net_Logo.svg" alt="VnExpress Logo"></a>';
+                //     L.DomEvent.disableClickPropagation(container);
+                //     return container;
+                // };
+                // logoControl.addTo(map);
 
                 updateTileLayer();
                 createWardsLayer();
                 setupEventListeners();
+                addRankings();
+                prepareChoroplethData();
                 densityButton.classList.add('active');
                 renderMapVisualization();
                 setLoading(false);
@@ -1029,3 +1167,10 @@
     </script>
 </body>
 </html>
+
+        @media (max-width: 640px) {
+            #heatmap-controls button {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.8rem;
+            }
+        }
