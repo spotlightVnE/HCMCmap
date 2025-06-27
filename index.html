@@ -340,6 +340,13 @@
             background-color: #4338ca;
             color: #ffffff !important
         }
+
+        /* --- NEW CSS TO REMOVE POPUP OVERLAY --- */
+        .leaflet-popup-overlay {
+            background: rgba(0,0,0,0); /* Fully transparent */
+            pointer-events: none;      /* Allows clicks to go through to the map */
+        }
+
     </style>
 </head>
 
