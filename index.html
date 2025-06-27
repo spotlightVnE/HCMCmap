@@ -853,9 +853,9 @@
                 searchHighlightLayer = L.geoJSON(feature, { style, interactive: false }).addTo(map);
 
                 // Add a permanent tooltip to the highlighted search result
-                if (tooltipText) {
-                    searchHighlightLayer.bindTooltip(tooltipText, { permanent: true, direction: 'center', className: 'ward-label' }).openTooltip();
-                }
+                // if (tooltipText) {
+                //    searchHighlightLayer.bindTooltip(tooltipText, { permanent: true, direction: 'center', className: 'ward-label' }).openTooltip();
+                // }
                 
                 if (shouldZoom) {
                     const bottomBarElement = document.getElementById('bottom-bar');
