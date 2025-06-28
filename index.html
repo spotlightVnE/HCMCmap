@@ -436,30 +436,98 @@
         height: 100%;
         border: 0;
         }
+        .info-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem 0.6rem;
+        margin-bottom: 0.5rem;
+        margin-top: 0.2rem;
+        }
+        .metric-cell {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 0.25rem 0.35rem 0.3rem 0.35rem;
+        text-align: center;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        }
+        .metric-label {
+        font-size: 0.74em;
+        color: #64748b;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        margin-bottom: 0;
+        white-space: nowrap;
+        text-align: center;
+        }
+        .metric-rank {
+        font-size: 1.02em;
+        color: #4338ca;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        margin-bottom: 0;
+        line-height: 1.1;
+        }
+        .metric-value {
+        font-size: 0.7em;
+        font-weight: 400;
+        color: #111827;
+        margin-top: 0;
+        text-align: center;
+        line-height: 1.18;
+        word-break: break-word;
+        }
+        @media (max-width: 600px) {
+        .info-metrics-grid {
+            gap: 0.33rem 0.33rem;
+        }
+        .metric-cell {
+            padding: 0.18rem 0.1rem 0.22rem 0.1rem;
+            font-size: 0.91em;
+        }
+        .metric-label, .metric-rank, .metric-value {
+            font-size: 0.98em;
+        }
+        .info-popup-header{
+            padding:0.35rem 0.6rem !important;
+        }
+        .info-popup-body{
+            padding:0.4rem 0.6rem !important;
+            gap:0.4rem !important;
+        }
+        .info-popup-footer{
+            padding:0.4rem !important;
+        }
+        .navigate-btn{
+            padding:0.35rem !important;
+            font-size:0.8rem !important;
+        }
+        .info-line{
+            gap:0.25rem !important;
+            font-size:0.8rem !important;
+        }
+        /* Make Leaflet popup X button bigger and more visible */
+        .leaflet-popup-close-button {
+            font-size: 2.1rem !important;   /* Bigger X */
+            line-height: 2.0rem !important;
+            width: 2.2rem !important;
+            height: 2.2rem !important;
+            right: 0.5rem !important;
+            top: 0.2rem !important;
+            opacity: 0.88 !important;
+            color: #333 !important;
+            background: none !important;
+        }
+        .leaflet-popup-close-button:hover {
+            color: #ef4444 !important;
+            opacity: 1 !important;
+        }
+        }
     </style>
 </head>
 
-<!-- === Extra‑compact popup spacing === -->
-<style>
-.info-popup-header{
-    padding:0.35rem 0.6rem !important;
-}
-.info-popup-body{
-    padding:0.4rem 0.6rem !important;
-    gap:0.4rem !important;
-}
-.info-popup-footer{
-    padding:0.4rem !important;
-}
-.navigate-btn{
-    padding:0.35rem !important;
-    font-size:0.8rem !important;
-}
-.info-line{
-    gap:0.25rem !important;
-    font-size:0.8rem !important;
-}
-</style>
 </head>
 
 <body>
@@ -886,9 +954,23 @@
                 return `
                     <div class="info-popup-header"><div class="info-popup-title">${type} ${name}</div></div>
                     <div class="info-popup-body">
-                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users fa-fw"></i><span>Dân số</span></div><div class="info-value">${populationRank ? `<span class="text-indigo-700 font-semibold">#${populationRank}/168</span> · ` : ''}${population}</div></div>
-                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-ruler-combined fa-fw"></i><span>Diện tích</span></div><div class="info-value">${areaRank ? `<span class="text-indigo-700 font-semibold">#${areaRank}/168</span> · ` : ''}${area}</div></div>
-                        <div class="info-line"><div class="info-label"><i class="fa-solid fa-users-viewfinder fa-fw"></i><span>Mật độ</span></div><div class="info-value">${densityRank ? `<span class="text-indigo-700 font-semibold">#${densityRank}/168</span> · ` : ''}${density}</div></div>
+                    <div class="info-metrics-grid">
+                    <div class="metric-cell">
+                        <div class="metric-label">Dân số</div>
+                        <div class="metric-rank">${populationRank ? `<span class="text-indigo-700 font-semibold">#${populationRank}/168</span>` : ''}</div>
+                        <div class="metric-value">${population} người</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-label">Diện tích</div>
+                        <div class="metric-rank">${areaRank ? `<span class="text-indigo-700 font-semibold">#${areaRank}/168</span>` : ''}</div>
+                        <div class="metric-value">${area}</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-label">Mật độ</div>
+                        <div class="metric-rank">${densityRank ? `<span class="text-indigo-700 font-semibold">#${densityRank}/168</span>` : ''}</div>
+                        <div class="metric-value">${density}</div>
+                    </div>
+                    </div>
                         <div class="info-section"><div class="info-label"><i class="fa-solid fa-code-merge fa-fw"></i><span>Sáp nhập</span></div>${mergedWardsText}</div>
                         <div class="info-section"><div class="info-label"><i class="fa-solid fa-location-dot fa-fw"></i><span>Trụ sở</span></div>${headquarters}</div>
                         ${hotline ? `<div class="info-section"><div class="info-label"><i class="fa-solid fa-phone fa-fw"></i><span>Đường dây nóng</span></div>${hotline}</div>` : ''}
