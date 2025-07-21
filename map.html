@@ -2,46 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atlas Embed</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- The viewport meta tag is intentionally different here to help with the scaling trick. -->
+    <meta name="viewport" content="width=1280">
+    <title>Atlas Embed - Forced Desktop View</title>
     <style>
+        /*
+          Core concept:
+          1. The body is set to a fixed desktop size (1280x720).
+          2. The iframe fills this fixed-size body.
+          3. JavaScript then calculates how much to "zoom out" (scale down) the entire body
+             so that it fits perfectly within the actual browser window (e.g., on a mobile phone).
+          This forces the iframe to render at a 1280px width before being scaled down.
+        */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Important: prevents scrollbars from appearing */
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
+            width: 1280px;
+            height: 720px;
+            background-color: #f3f4f6;
+            /* The transform origin is set to the top-left corner for easier calculations. */
+            transform-origin: 0 0;
         }
-        /* Centering the iframe container */
-        .iframe-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100vh; /* Full viewport height */
-            overflow: hidden; /* Hide overflow from the body */
-        }
-        /* Styling for the iframe to prevent mobile mode */
+
         iframe {
-            border-radius: 0.75rem; /* 12px */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            height: 100%;
+            border: 0;
         }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
 
-    <div class="iframe-container p-4 md:p-8">
-        <!-- 
-          The iframe is set to a fixed width (1280px) and height (720px) 
-          to ensure the desktop version of the embedded content is loaded.
-          This effectively "disables" the mobile responsive view.
-        -->
-        <iframe 
-            src="https://app.atlas.co/embeds/KNL4HCdxs4aJKbwziuSM" 
-            width="1280" 
-            height="720" 
-            frameborder="0"
-            allowfullscreen>
-        </iframe>
-    </div>
+    <iframe 
+        src="https://app.atlas.co/embeds/KNL4HCdxs4aJKbwziuSM"
+        title="Atlas Embed"
+        allowfullscreen>
+    </iframe>
+
+    <script>
+        function scaleToFit() {
+            // The fixed dimensions of our "virtual" desktop screen
+            const desktopWidth = 1280;
+            const desktopHeight = 720;
+
+            // The actual dimensions of the browser window
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            // Calculate the ratio to scale down by
+            const scaleX = windowWidth / desktopWidth;
+            const scaleY = windowHeight / desktopHeight;
+
+            // Use the smaller of the two ratios to ensure the entire iframe fits without being cropped
+            const scale = Math.min(scaleX, scaleY);
+
+            // Calculate the translation needed to center the scaled content
+            const offsetX = (windowWidth - (desktopWidth * scale)) / 2;
+            const offsetY = (windowHeight - (desktopHeight * scale)) / 2;
+
+            // Apply the scale and translation to the body
+            document.body.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+        }
+
+        // Run the function when the page loads
+        window.onload = scaleToFit;
+        // Rerun the function if the window is resized (e.g., device rotation)
+        window.onresize = scaleToFit;
+    </script>
 
 </body>
 </html>
